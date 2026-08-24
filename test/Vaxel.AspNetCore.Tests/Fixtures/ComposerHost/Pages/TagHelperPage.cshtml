@@ -1,0 +1,21 @@
+@page "/tag-helper-page"
+@model global::Vaxel.AspNetCore.Tests.Fixtures.ComposerHost.Pages.TagHelperPageModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <vaxel-antiforgery />
+</head>
+<body>
+    <a href="/apps/a_1?tab=submissions" vx-get vx-target="#pane" vx-vals-tab="submissions">Submissions</a>
+    <form method="post" action="/contact" vx-post vx-target="#contact-form" vx-indicator="#saving" vx-disable>
+        <button type="submit">Submit</button>
+    </form>
+    <section id="pane" vx-region>
+        <span vx-text="draftSeq">1</span>
+        <div vx-show="isVisible" vx-class:is-active="tabIsActive" vx-attr:disabled="isSubmitting">Tab Content</div>
+    </section>
+</body>
+</html>

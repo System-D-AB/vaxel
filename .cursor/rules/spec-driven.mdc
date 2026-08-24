@@ -1,0 +1,16 @@
+---
+description: Spec-driven workflow for specs/ packets
+globs: specs/**/*.md
+alwaysApply: false
+---
+
+# Spec-driven packets
+
+Each slice is `specs/<name>/{requirements,design,tasks}.md`.
+
+1. Requirements use user stories and EARS (“WHEN … THE SYSTEM SHALL …”).
+2. Design lists files, types, and tests. Cite `docs/`; do not paste the protocol.
+3. Tasks are checkboxes. Each cites requirement IDs. Tests before the code that makes them pass.
+4. Copy `specs/_template/` for a new slice. Add the row to `specs/README.md`.
+
+Out of scope for a packet belongs in that packet's “Deferred” table, not in silent extra code.

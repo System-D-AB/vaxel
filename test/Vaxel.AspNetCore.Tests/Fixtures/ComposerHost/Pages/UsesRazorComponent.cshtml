@@ -1,0 +1,6 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using global::Vaxel.AspNetCore.Tests.Fixtures.ComposerHost.Components
+<section id="rc">
+    @(await Html.RenderComponentAsync<HelloComponent>(RenderMode.Static, new { Message = "world" }))
+</section>

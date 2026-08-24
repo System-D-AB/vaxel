@@ -1,0 +1,5 @@
+@page
+@model global::Vaxel.AspNetCore.Tests.Fixtures.ComposerHost.Pages.UsesPartialModel
+<section id="hello">
+    @await Html.PartialAsync("_Hello", Model.Message)
+</section>

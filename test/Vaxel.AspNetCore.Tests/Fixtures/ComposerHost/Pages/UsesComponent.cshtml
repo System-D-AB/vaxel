@@ -1,0 +1,5 @@
+@page
+@model global::Vaxel.AspNetCore.Tests.Fixtures.ComposerHost.Pages.UsesComponentModel
+<section id="badge-wrap">
+    @await Component.InvokeAsync("Badge", new { label = "ok" })
+</section>

@@ -1,0 +1,17 @@
+---
+description: Växel contract — four rules and where truth lives
+alwaysApply: true
+---
+
+# Växel contract
+
+`docs/` is the framework contract. `specs/` is the implementation backlog. Do not mix them.
+
+- **R1** Server renders everything. No client templates.
+- **R2** Attribute values are data, never code. No `eval`, `Function()`, or expression language.
+- **R3** Every fragment target is also a full page.
+- **R4** No per-user server UI state.
+
+If code needs to differ from `docs/`, change `docs/` in the same commit and add a CHANGELOG entry that says why. Packet `design.md` cites `docs/`; it is not a second contract.
+
+Implement the open packet named in [`specs/README.md`](specs/README.md). Do not invent packets ahead of that index. Do not add a client router, expression language, or per-user server UI state.

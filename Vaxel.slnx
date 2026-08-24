@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Vaxel.Analyzers/Vaxel.Analyzers.csproj" />
+    <Project Path="src/Vaxel.AspNetCore/Vaxel.AspNetCore.csproj" />
+    <Project Path="src/Vaxel.Client/Vaxel.Client.csproj" />
+    <Project Path="src/Vaxel.Datastar/Vaxel.Datastar.csproj" />
+    <Project Path="src/Vaxel.Testing/Vaxel.Testing.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Vaxel.AspNetCore.Tests/Vaxel.AspNetCore.Tests.csproj" />
+    <Project Path="test/Vaxel.Browser.Tests/Vaxel.Browser.Tests.csproj" />
+    <Project Path="test/Vaxel.Client.Tests/Vaxel.Client.Tests.csproj" />
+    <Project Path="test/Vaxel.Conformance.Host/Vaxel.Conformance.Host.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vaxel.AspNetCore\Vaxel.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\Vaxel.Testing\Vaxel.Testing.csproj" />
+    <ProjectReference Include="..\..\src\Vaxel.Analyzers\Vaxel.Analyzers.csproj" />
+    <ProjectReference Include="..\..\src\Vaxel.Datastar\Vaxel.Datastar.csproj" />
+  </ItemGroup>
+
+</Project>
