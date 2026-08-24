@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Vaxel;
 
 /// <summary>
-/// Fluent builder for constructing a Växel patch document.
+/// Fluent builder for constructing a vaxel patch document.
 /// </summary>
 public sealed class PatchBuilder : IResult, IActionResult
 {

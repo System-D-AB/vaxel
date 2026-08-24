@@ -14,7 +14,7 @@ public sealed class DevOverlayTests
 
         // Production bundle must not contain dev overlay inspector
         Assert.DoesNotContain("vaxel-dev-overlay", prodCode);
-        Assert.DoesNotContain("Växel Dev Inspector", prodCode);
+        Assert.DoesNotContain("vaxel Dev Inspector", prodCode);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public sealed class DevOverlayTests
 
         var devCode = File.ReadAllText(devBundlePath, Encoding.UTF8);
         Assert.Contains("vaxel-dev-overlay", devCode);
-        Assert.Contains("Växel Dev Inspector", devCode);
+        Assert.Contains("vaxel Dev Inspector", devCode);
         Assert.Contains("vx:after-apply", devCode);
         Assert.Contains("vx:error", devCode);
         Assert.Contains("vx:signals-changed", devCode);

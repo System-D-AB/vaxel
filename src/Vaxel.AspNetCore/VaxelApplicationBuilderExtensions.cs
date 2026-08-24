@@ -7,8 +7,8 @@ namespace Microsoft.AspNetCore.Builder;
 public static class VaxelApplicationBuilderExtensions
 {
     /// <summary>
-    /// Adds Växel middleware for protocol response marking (Vary: VX-Request) and negotiation.
-    /// Does not short-circuit non-Växel requests.
+    /// Adds vaxel middleware for protocol response marking (Vary: VX-Request) and negotiation.
+    /// Does not short-circuit non-vaxel requests.
     /// </summary>
     public static IApplicationBuilder UseVaxel(this IApplicationBuilder app)
     {
@@ -16,6 +16,25 @@ public static class VaxelApplicationBuilderExtensions
 
         return app.Use(async (context, next) =>
         {
+            // 1. Serve embedded client assets (/_vaxel/vaxel.js, /_vaxel/vaxel.dev.js, /_vaxel/vaxel-htmx.js)
+            if (context.Request.Path.StartsWithSegments("/_vaxel", out var remaining))
+            {
+                var fileName = remaining.Value?.TrimStart('/');
+                if (!string.IsNullOrEmpty(fileName) && (fileName == "vaxel.js" || fileName == "vaxel.dev.js" || fileName == "vaxel-htmx.js"))
+                {
+                    var assembly = typeof(VaxelApplicationBuilderExtensions).Assembly;
+                    var resourceName = $"Vaxel.AspNetCore.wwwroot._vaxel.{fileName}";
+                    using var stream = assembly.GetManifestResourceStream(resourceName);
+                    if (stream is not null)
+                    {
+                        context.Response.ContentType = "application/javascript; charset=utf-8";
+                        context.Response.Headers.CacheControl = "no-cache";
+                        await stream.CopyToAsync(context.Response.Body, context.RequestAborted).ConfigureAwait(false);
+                        return;
+                    }
+                }
+            }
+
             context.Response.OnStarting(() =>
             {
                 var response = context.Response;

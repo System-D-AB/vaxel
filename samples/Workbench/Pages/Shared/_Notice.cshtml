@@ -1,0 +1,20 @@
+@model dynamic
+
+@{
+    string message = "";
+    bool isError = false;
+
+    if (Model is (string msg, bool err))
+    {
+        message = msg;
+        isError = err;
+    }
+    else if (Model is string str)
+    {
+        message = str;
+    }
+}
+
+<div class="notice @(isError ? "refusal" : "success")">
+    @message
+</div>

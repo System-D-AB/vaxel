@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\Vaxel.Testing\Vaxel.Testing.csproj" />
     <ProjectReference Include="..\..\src\Vaxel.Analyzers\Vaxel.Analyzers.csproj" />
     <ProjectReference Include="..\..\src\Vaxel.Datastar\Vaxel.Datastar.csproj" />
+    <ProjectReference Include="..\..\samples\Workbench\Workbench.csproj" />
   </ItemGroup>
 
 </Project>

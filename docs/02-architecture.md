@@ -111,4 +111,4 @@ Because triggers are real links and forms, the no-agent path is the ordinary web
 
 ## Islands
 
-Where a screen genuinely needs client logic — drag reordering, a text editor, a canvas — the application mounts its own script inside an element marked `vx-preserve`. Växel guarantees the subtree is not morphed away and provides two lifecycle events (`vx:before-apply`, `vx:after-apply`) so the island can suspend and resume. Växel does not wrap, bundle or abstract these islands.
+Where a screen genuinely needs client logic — drag reordering, a text editor, a canvas — the application mounts its own script inside an element marked `vx-preserve`. vaxel guarantees the subtree is not morphed away and provides two lifecycle events (`vx:before-apply`, `vx:after-apply`) so the island can suspend and resume. vaxel does not wrap, bundle or abstract these islands.

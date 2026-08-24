@@ -1,27 +1,27 @@
 # 13 — Adopting Datastar's tests as our scoreboard
 
-Datastar is MIT-licensed and ships a black-box conformance suite for server SDKs. We take it, run it against Växel, and let it tell us where we are. This document says exactly what exists upstream, what we adopt, how, and how the result is scored.
+Datastar is MIT-licensed and ships a black-box conformance suite for server SDKs. We take it, run it against vaxel, and let it tell us where we are. This document says exactly what exists upstream, what we adopt, how, and how the result is scored.
 
 Upstream inventory, read from the repository tree on 2026-08-23:
 
 | Upstream | Contents | Adoptable? |
 |---|---|---|
-| `sdk/test/` | **20 conformance cases** (19 GET, 1 POST) as `input.json` → `output.txt` pairs, plus `test-all.sh`, `test-get.sh`, `test-post.sh`, `compare-sse.sh` — driven by curl/awk against a server's `/test` endpoint | **Yes, wholesale.** This is the half of Växel that matters most, and the suite is already language-agnostic |
+| `sdk/test/` | **20 conformance cases** (19 GET, 1 POST) as `input.json` → `output.txt` pairs, plus `test-all.sh`, `test-get.sh`, `test-post.sh`, `compare-sse.sh` — driven by curl/awk against a server's `/test` endpoint | **Yes, wholesale.** This is the half of vaxel that matters most, and the suite is already language-agnostic |
 | `sdk/README.md`, `sdk/ADR.md` | The SDK specification the cases enforce | **Yes, as a reference** for the compatibility adapter |
 | `library/src/plugins/{attributes,actions,watchers}` | 17 attribute plugins, 4 actions, 2 watchers — the reference implementation | **Yes, as a behaviour specification.** Read per plugin; each becomes rows in our fixture suite |
 | Browser/unit tests for the client library | **Not present in the repository tree.** There is no `library/tests` directory | Nothing to adopt; our client fixtures are ours to write |
 
-The headline: **their ready-made suite tests servers, and Växel's server half is the part we most want measured.** The client side has no upstream suite to inherit, so parity there is proven by fixtures we author against their plugin sources.
+The headline: **their ready-made suite tests servers, and vaxel's server half is the part we most want measured.** The client side has no upstream suite to inherit, so parity there is proven by fixtures we author against their plugin sources.
 
 ---
 
 ## 1. Adopt `sdk/test` by building the compatibility adapter early
 
-Their harness expects a server exposing `/test`, accepting any method, reading signals to get an `events` array, and emitting Datastar-shaped SSE. Ours emits HTML patch documents. Rather than fork their cases (which would make the comparison meaningless), we make Växel speak their wire **in one place**:
+Their harness expects a server exposing `/test`, accepting any method, reading signals to get an `events` array, and emitting Datastar-shaped SSE. Ours emits HTML patch documents. Rather than fork their cases (which would make the comparison meaningless), we make vaxel speak their wire **in one place**:
 
 ```
 Vaxel.Datastar (adapter)  →  PatchDocument  →  Datastar SSE framing
-                                            →  Växel patch document (native)
+                                            →  vaxel patch document (native)
 ```
 
 `Vaxel.Datastar` was scheduled after v1.0 in [11 — Datastar reuse](11-datastar-reuse.md). **It is promoted: build it first, as a measuring instrument.** Reasons it is the right call rather than a shortcut:
@@ -47,7 +47,7 @@ $ ./test-all.sh http://localhost:5199
 | `removeElements*` (defaults, all options, without defaults) | 3 | **Must pass** — our `remove` mode |
 | `removeSignals*` (defaults, all options) | 2 | **Must pass** — delete-by-null |
 | `sendTwoEvents` | 1 | **Must pass** — multiple patches in one response |
-| `readSignalsFromBody` (POST) | 1 | **Must pass through the adapter.** Native Växel reads the `VX-Signals` header; the adapter accepts a body, which is exactly what a compatibility adapter is for |
+| `readSignalsFromBody` (POST) | 1 | **Must pass through the adapter.** Native vaxel reads the `VX-Signals` header; the adapter accepts a body, which is exactly what a compatibility adapter is for |
 | `executeScript*` (defaults, all options, without defaults, multiline) | 4 | **Declined, and asserted as declined.** We do not execute server-sent script ([12 §4](12-parity-with-datastar.md)). The adapter returns a documented refusal, and our fork of the scoreboard records `⛔ 4` rather than a false pass |
 
 **Target: 16 pass, 4 declined, 0 failing.** Anything else is a defect.
@@ -61,12 +61,12 @@ conformance/parity/<plugin>/
   README.md          ← upstream file, commit, and what it does
   01-<behaviour>/{before.html, patch.html, expected.html, assert.json}
   …
-  SCORE.md           ← Full / Outcome / Declined, with the Växel construct named
+  SCORE.md           ← Full / Outcome / Declined, with the vaxel construct named
 ```
 
 Order of work, most load-bearing first: `bind` → `on` → `patchElements` semantics → `signals` → `attr`/`class`/`text`/`show` → `indicator` → `onIntersect`/`onInterval` → `style` → `init` → `persist`/`query-string` → the rest.
 
-Where a plugin exists only to run expressions (`computed`, `effect`, `onSignalPatch`, `ref`), the fixture asserts the **outcome** through the Växel construct and records the authoring cost — a round trip, or an island of *n* lines. That number is the honest measure of the trade this framework makes, and it belongs in the open rather than in a footnote.
+Where a plugin exists only to run expressions (`computed`, `effect`, `onSignalPatch`, `ref`), the fixture asserts the **outcome** through the vaxel construct and records the authoring cost — a round trip, or an island of *n* lines. That number is the honest measure of the trade this framework makes, and it belongs in the open rather than in a footnote.
 
 ## 3. Their examples as an acceptance corpus
 
@@ -77,7 +77,7 @@ Where a plugin exists only to run expressions (`computed`, `effect`, `onSignalPa
 Adoption is not the whole suite. Four areas are ours because they follow from decisions Datastar did not make:
 
 1. **Parity harness** (R3) — every fragment target reachable as a page. Nothing upstream tests this because nothing upstream promises it.
-2. **CSP suite** — strict policy, zero violations, no `eval`/`Function` in the bundle. Upstream cannot pass this by construction, which is the entire reason Växel exists.
+2. **CSP suite** — strict policy, zero violations, no `eval`/`Function` in the bundle. Upstream cannot pass this by construction, which is the entire reason vaxel exists.
 3. **Dirty-input arbitration and morph behaviour** under real focus, caret, selection and IME.
 4. **Accessibility** — focus restoration, `aria-busy`, live-region announcements, and the rule that push-driven patches never steal focus.
 

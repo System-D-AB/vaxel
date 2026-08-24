@@ -76,7 +76,10 @@ app.MapGet("/plain-route", () => Results.Text("plain text", "text/plain"));
 
 app.Run();
 
-public partial class Program;
+namespace Vaxel.AspNetCore.Tests.Fixtures.ComposerHost
+{
+    public partial class Program;
+}
 
 internal static class HtmlContent
 {

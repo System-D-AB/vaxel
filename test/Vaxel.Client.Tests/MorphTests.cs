@@ -47,7 +47,8 @@ public sealed class MorphTests
 
         Assert.Contains("vx-preserve", code);
         Assert.Contains("vx-preserve-attr", code);
-        Assert.Contains("vx-overwrite-dirty", code);
+        Assert.Contains("morphIntoTarget", code);
+        Assert.Contains("<vx-patch\\b", code);
         Assert.Contains("activeElement", code);
     }
 

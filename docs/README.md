@@ -1,6 +1,6 @@
 # docs/ — the framework contract
 
-This folder is the **constitution** of Växel: principles, architecture, wire protocol, .NET API, security, testing and Datastar parity.
+This folder is the **constitution** of vaxel: principles, architecture, wire protocol, .NET API, security, testing and Datastar parity.
 
 It used to be called `spec/`. It was renamed so implementation packets could live in [`specs/`](../specs/README.md) without colliding with the contract.
 

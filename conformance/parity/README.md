@@ -1,6 +1,6 @@
 # Conformance Parity Fixtures
 
-This directory documents the 17 attribute plugins, 10 pro attributes, and 4 actions from Datastar, mapped to Växel constructs and their parity status.
+This directory documents the 17 attribute plugins, 10 pro attributes, and 4 actions from Datastar, mapped to vaxel constructs and their parity status.
 
 | Category | Full | Outcome | Partial | Declined | Total |
 |---|---|---|---|---|---|

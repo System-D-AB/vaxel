@@ -52,7 +52,7 @@ That last row is why the exercise matters: it is the cheapest available test of 
 
 ## 5. Datastar compatibility mode (optional, later)
 
-A Växel server could speak Datastar's SSE protocol — `datastar-patch-elements` / `datastar-patch-signals` with their data-line keys — behind a flag. That would let a team drive a Växel .NET backend with the Datastar client, accepting `unsafe-eval` in exchange for its expressiveness.
+A vaxel server could speak Datastar's SSE protocol — `datastar-patch-elements` / `datastar-patch-signals` with their data-line keys — behind a flag. That would let a team drive a vaxel .NET backend with the Datastar client, accepting `unsafe-eval` in exchange for its expressiveness.
 
 Arguments for: the .NET server half is the valuable half, and this doubles its addressable users; it also proves the server API is not entangled with our own client.
 

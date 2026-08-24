@@ -1,8 +1,8 @@
 # Example Corpus Scoring
 
-Scoring of public hypermedia / reactive example patterns against Växel.
+Scoring of public hypermedia / reactive example patterns against vaxel.
 
-| Example Pattern | Datastar Pattern | Växel Construct | Verdict |
+| Example Pattern | Datastar Pattern | vaxel Construct | Verdict |
 |---|---|---|---|
 | Active Search | `data-on-input="$$get('/search')"` | `<input vx-get="/search" vx-target="#results" />` | ✅ Same |
 | Bulk Update | `data-on-click="$$post('/bulk')"` | `<form vx-post="/bulk" vx-target="#table">` | ✅ Same |

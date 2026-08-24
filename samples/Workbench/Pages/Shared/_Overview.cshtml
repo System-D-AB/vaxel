@@ -1,0 +1,18 @@
+@model dynamic
+
+<h3>Welcome to vaxel Workbench</h3>
+<p>This sample is a small admin shell. The header stays put; only the centre panel updates. Sign in first if you want to approve a submission.</p>
+<ol style="color: #cbd5e1; line-height: 1.6; padding-left: 1.25rem;">
+    <li><strong>Sign In</strong> (top right) — Alice can approve; Bob cannot.</li>
+    <li><strong>Submissions</strong> — a budget queue. Approve #101 (refused unless you are Alice).</li>
+    <li><strong>Proposals</strong> — click Edit, change the title, Save. The live rail on the right should tick.</li>
+    <li><strong>Contact Form</strong> — send a name + message; empty fields come back with an error.</li>
+    <li><strong>Settings</strong> — read-only push/CSP values for this demo.</li>
+</ol>
+<div style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+    <a href="/login" class="btn">Sign In</a>
+    <a href="/?tab=submissions" class="btn" vx-get vx-target="#pane" vx-vals-tab="submissions">Submissions</a>
+    <a href="/?tab=proposals" class="btn" vx-get vx-target="#pane" vx-vals-tab="proposals">Proposals</a>
+    <a href="/?tab=settings" class="btn" vx-get vx-target="#pane" vx-vals-tab="settings">Settings</a>
+    <a href="/contact" class="btn" vx-get vx-target="#pane">Contact</a>
+</div>

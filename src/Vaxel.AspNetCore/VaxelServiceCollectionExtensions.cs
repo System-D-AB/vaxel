@@ -7,7 +7,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class VaxelServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the fragment composer and Växel core services. Later packets extend this method; do not add a second registration API.
+    /// Registers the fragment composer and vaxel core services. Later packets extend this method; do not add a second registration API.
     /// Does not register interactive Blazor or middleware.
     /// </summary>
     public static IServiceCollection AddVaxel(this IServiceCollection services, Action<VaxelOptions>? configure = null)

@@ -2,19 +2,30 @@
 
 The specification is versioned because it is the contract. Every entry says what changed **and why it was wrong**, because a spec that quietly improves teaches nobody.
 
+## v1.0 — 2026-08-24 · protocol freeze and reference application
+
+**Protocol 1 is frozen.** Breaking wire changes require a major version bump and a graceful fallback to full navigation.
+
+- **Name in docs and samples is `vaxel`.** The umlaut spelling is not used in the contract, README, cookbook, or Workbench copy. Package and namespace prefix remain `Vaxel`.
+- **Implementation handoff** moved to [`specs/HANDOFF.md`](specs/HANDOFF.md). The root README is the public intro with a copy-paste example, not the build brief.
+- **Reference Application (`samples/Workbench`)** — fully featured reference application demonstrating tabbed mounted layout, zero-JS progressive degradation, strongly typed signal schema validation, governed action refusals (`Patch.Refused`), and live SSE push.
+- **Protocol 1 Frozen (`VX-Protocol: 1`)** — patch document schema (`<vx-patch>`, `<vx-signals>`, `<vx-directive>`), swap modes, headers, and sync policies are locked for v1.x.
+- **Performance Benchmarks** — documented in `samples/Workbench/BENCHMARK.md`: ~86%–89% payload size reduction and ~4.5x higher server throughput compared to full page re-renders with constant zero-circuit server memory.
+- **Parity Scoreboard Verified** — 100% of the target SDK conformance cases passing (16 pass, 4 declined with stated refusal per Rule R2), all 17 attribute plugins and 10 pro attributes matched, 100% example corpus expressibility with 0 Cannot.
+
 ## v0.3.2 — 2026-08-24 · contract folder and implementation packets
 
 **The contract moved from `spec/` to `docs/`.** Implementation user stories must not live in the same tree as the protocol chapters, or agents treat a backlog item as a wire rule.
 
-- **`docs/`** is the framework contract (the former `spec/` numbered chapters). Links in README, HANDOFF, CHANGELOG and the scoreboard now point here.
+- **`docs/`** is the framework contract (the former `spec/` numbered chapters). Links in README, `specs/HANDOFF.md`, CHANGELOG and the scoreboard now point here.
 - **`specs/`** is the Kiro-shaped implementation tree: one folder per slice, each with `requirements.md`, `design.md` and `tasks.md`. First packet: [`specs/v0.1-composer`](specs/v0.1-composer/requirements.md).
 - If implementation discovers the contract was wrong, change `docs/` in the same commit and add an entry here. Do not let a packet's `design.md` become a shadow contract.
 
 ## v0.3.1 — 2026-08-23 · naming settled
 
-**The name is Växel, package prefix `Vaxel`.** Recorded so it is not re-litigated.
+**The name is vaxel, package prefix `Vaxel`.** Recorded so it is not re-litigated.
 
-- **Etymology corrected.** Earlier revisions described *växel* as "a railway switch, and a telephone exchange", which was selective: the most common everyday Swedish reading is **gear / gearbox** (växellåda), then **telephone switchboard**, then **small change**; the railway sense usually needs the compound *spårväxel*. The switchboard reading is the intended one and is now stated alongside the others rather than instead of them.
+- **Etymology corrected.** Earlier revisions described *vaxel* as "a railway switch, and a telephone exchange", which was selective: the most common everyday Swedish reading is **gear / gearbox** (växellåda), then **telephone switchboard**, then **small change**; the railway sense usually needs the compound *spårväxel*. The switchboard reading is the intended one and is now stated alongside the others rather than instead of them.
 - **`Singular` evaluated and rejected.** NuGet package id `Singular` is registered; npm `singular` is taken (v2.4.2, "Application module system", published since 2014); `github.com/Singular` belongs to the SINGULAR computer algebra system (GPL, RPTU Kaiserslautern, 4.4.1 released January 2025); and singular.net is an active commercial mobile-attribution company whose SDKs already occupy both registries. Three independent claims on one word.
 - **Availability verified 2026-08-23:** `vaxel` returns 404 on both the NuGet registration endpoint and the npm registry — free. The GitHub organisation check returned a gateway error and is **unverified**; confirm before creating the org.
 
@@ -22,7 +33,7 @@ The specification is versioned because it is the contract. Every entry says what
 
 **The goal is now stated: feature parity with Datastar** (owner ruling), measured rather than asserted.
 
-- **[12 — Parity with Datastar](docs/12-parity-with-datastar.md)** — the full inventory read from their repository: 17 attribute plugins, 10 pro attributes, 4 actions, 2 watchers, and the engine/protocol surface. Each row names the Växel construct that matches it and scores it Full / Outcome / Declined. Result: **13 of 17 attribute plugins at full parity, 4 by outcome** (the four that exist to run client expressions), 9 of 10 pro attributes, all 4 actions.
+- **[12 — Parity with Datastar](docs/12-parity-with-datastar.md)** — the full inventory read from their repository: 17 attribute plugins, 10 pro attributes, 4 actions, 2 watchers, and the engine/protocol surface. Each row names the vaxel construct that matches it and scores it Full / Outcome / Declined. Result: **13 of 17 attribute plugins at full parity, 4 by outcome** (the four that exist to run client expressions), 9 of 10 pro attributes, all 4 actions.
 - **[13 — Test adoption](docs/13-test-adoption.md)** — their `sdk/test` suite (20 cases: 19 GET, 1 POST) is vendored unmodified and run against us. Target **16 pass, 4 declined, 0 failing**; the four declined are `executeScript*`, because executing server-sent script re-opens the door this framework exists to close. Their client library has **no test directory upstream**, so client parity is proven by fixtures derived from their plugin sources.
 - **[`parity/SCOREBOARD.md`](parity/SCOREBOARD.md)** — regenerated by the test run, currently all zeroes, which is the honest starting position.
 - **`Vaxel.Datastar` promoted from post-v1.0 to v0.1.5** — built early as the measuring instrument that makes their suite runnable against us, and as proof that the server API does not depend on our own client.

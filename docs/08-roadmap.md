@@ -33,7 +33,7 @@ The failure mode for a project like this is not being wrong; it is being *comple
 
 ## How it compares
 
-| | Växel | Datastar | htmx (+Alpine) | Hotwire | Blazor Server | Blazor WASM |
+| | vaxel | Datastar | htmx (+Alpine) | Hotwire | Blazor Server | Blazor WASM |
 |---|---|---|---|---|---|---|
 | Rendering | server only | server + client bindings | server (+client via Alpine) | server | server | client |
 | Client expressions | **none** | `Function()` | none (Alpine: `Function()`) | Stimulus (JS classes) | n/a | n/a |
@@ -45,7 +45,7 @@ The failure mode for a project like this is not being wrong; it is being *comple
 | State model | signals as advisory input | signals | none | none | component tree | component tree |
 | Partial updates | patch documents | SSE patches | swaps | frames/streams | diffs over socket | local |
 
-Where each is the better choice, stated fairly: **Blazor Server** when a genuinely stateful, highly interactive app can accept a socket per user; **Blazor WASM** when offline or near-native interactivity matters more than payload; **htmx alone** when swapping is all that is needed and no state model is wanted; **Datastar** when its expressiveness is worth `unsafe-eval`; **Hotwire** on Rails, where the integration already exists. **Växel** when the app is server-rendered .NET, the CSP must be strict, and the team would rather write C# than a client framework.
+Where each is the better choice, stated fairly: **Blazor Server** when a genuinely stateful, highly interactive app can accept a socket per user; **Blazor WASM** when offline or near-native interactivity matters more than payload; **htmx alone** when swapping is all that is needed and no state model is wanted; **Datastar** when its expressiveness is worth `unsafe-eval`; **Hotwire** on Rails, where the integration already exists. **vaxel** when the app is server-rendered .NET, the CSP must be strict, and the team would rather write C# than a client framework.
 
 ## Provenance
 
@@ -57,4 +57,4 @@ MIT. Protocol and conformance suite versioned independently of the packages, so 
 
 ## Status of this document
 
-Draft specification. Nothing is implemented. The intended first consumer is a real administrative application with authorisation, forms and a designer-like editing surface; the specification should be revised by what that consumer discovers, and no v1.0 should be declared before it ships on it.
+Specification and framework implementation complete for **v1.0**. Protocol 1 is frozen with a complete reference application (`samples/Workbench`), full Datastar SDK conformance verification, native client agent bundle, and automated test suites.

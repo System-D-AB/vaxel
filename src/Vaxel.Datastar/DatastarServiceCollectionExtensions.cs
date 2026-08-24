@@ -8,7 +8,7 @@ namespace Vaxel.Datastar;
 public static class DatastarServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds the Datastar adapter for translating Växel backend responses to the Datastar SSE client.
+    /// Adds the Datastar adapter for translating vaxel backend responses to the Datastar SSE client.
     /// <para>
     /// WARNING: The Datastar client requires 'unsafe-eval' in Content-Security-Policy to execute client-side expressions.
     /// </para>

@@ -1,0 +1,23 @@
+@model dynamic
+
+@{
+    int? editId = null;
+    if (Model is int id)
+    {
+        editId = id;
+    }
+}
+
+<h3>Project Proposals</h3>
+<p style="color: #94a3b8;">Inline edit without a SPA. Click <strong>Edit Proposal</strong>, change the title, Save (or Cancel). The card updates in place; the Live Activity rail on the right should show a push line.</p>
+
+<div id="prop-201" vx-region style="background: #0f172a; padding: 1rem; border-radius: 6px; margin-top: 1rem; border: 1px solid @(editId == 201 ? "#38bdf8" : "#334155");">
+    @if (editId == 201)
+    {
+        <partial name="_ProposalEdit" model="@((201, "Realtime Agent Architecture (v2)"))" />
+    }
+    else
+    {
+        <partial name="_ProposalItem" model="@((201, "Proposal A: Realtime Agent Architecture", "Alice (Engineering)"))" />
+    }
+</div>

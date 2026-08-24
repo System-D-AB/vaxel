@@ -1,7 +1,7 @@
 namespace Vaxel;
 
 /// <summary>
-/// Thrown when a Växel Tag Helper violates architectural or protocol rules at render time.
+/// Thrown when a vaxel Tag Helper violates architectural or protocol rules at render time.
 /// </summary>
 public sealed class VaxelTagHelperException : InvalidOperationException
 {

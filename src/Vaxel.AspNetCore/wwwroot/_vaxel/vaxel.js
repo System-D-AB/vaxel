@@ -1,5 +1,5 @@
 /**
- * Växel Client Agent (v0.2)
+ * vaxel Client Agent (v0.2)
  * Server-driven web framework for .NET.
  * Zero-eval, strict CSP compatible, self-contained.
  */
@@ -203,7 +203,7 @@
 
         // R2 Check: Disallow expression operators in signal names
         if (name.startsWith('vx-') && /[()<>=!&|+*\/;]/.test(val)) {
-          console.warn('Växel Rule R2 violation: expressions prohibited in attribute value: ' + val);
+          console.warn('vaxel Rule R2 violation: expressions prohibited in attribute value: ' + val);
           continue;
         }
 
@@ -391,6 +391,26 @@
     }
   }
 
+  // Morph the incoming fragment INTO the target. If the fragment's first
+  // element is the target itself (same id), morph that node. Otherwise the
+  // fragment is the target's inner HTML (cookbook #pane patches) — keep the
+  // target identity and morph its children.
+  function morphIntoTarget(targetEl, fragment) {
+    var incoming = fragment.firstElementChild;
+    if (!incoming) {
+      return;
+    }
+    if (incoming.id && targetEl.id && incoming.id === targetEl.id) {
+      morphElement(targetEl, incoming);
+      return;
+    }
+    var wrapper = targetEl.cloneNode(false);
+    while (fragment.firstChild) {
+      wrapper.appendChild(fragment.firstChild);
+    }
+    morphElement(targetEl, wrapper);
+  }
+
   function applyPatch(targetSelector, fragmentHtml, mode, namespace) {
     var targetEl = document.querySelector(targetSelector);
     if (!targetEl) {
@@ -412,6 +432,9 @@
 
     switch (mode) {
       case 'morph':
+        morphIntoTarget(targetEl, fragment);
+        break;
+
       case 'outer':
         if (fragment.firstElementChild) {
           morphElement(targetEl, fragment.firstElementChild);
@@ -501,48 +524,56 @@
     setTimeout(function () { liveRegion.textContent = text; }, 50);
   }
 
-  // --- 5. Patch Document Processor ---
+  function parseXmlAttrs(attrSource) {
+    var attrs = {};
+    if (!attrSource) return attrs;
+    var re = /([^\s=]+)(?:\s*=\s*"([^"]*)"|\s*=\s*'([^']*)')?/g;
+    var m;
+    while ((m = re.exec(attrSource))) {
+      attrs[m[1].toLowerCase()] = m[2] != null ? m[2] : (m[3] != null ? m[3] : '');
+    }
+    return attrs;
+  }
+
+  // Extract <vx-patch> from the raw document. Do not HTML-parse the wrapper:
+  // a <section>/<div> inside an unknown element can be emptied by DOMParser,
+  // which looks like "clicks do nothing".
   function processPatchDocument(htmlText, userInitiated, triggerEl) {
     emitEvent('vx:before-apply', { html: htmlText });
 
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(htmlText, 'text/html');
-
-    var patches = Array.from(doc.querySelectorAll('vx-patch'));
-    var signalsEl = doc.querySelector('vx-signals');
-    var directiveEl = doc.querySelector('vx-directive');
-
-    // 1. Apply Patches
     var appliedCount = 0;
-    patches.forEach(function (patch) {
-      var target = patch.getAttribute('target');
-      var mode = patch.getAttribute('mode') || 'morph';
-      var ns = patch.getAttribute('namespace') || 'html';
-      var content = patch.innerHTML;
+    var patchRe = /<vx-patch\b([^>]*)>([\s\S]*?)<\/vx-patch>/gi;
+    var patchMatch;
+    while ((patchMatch = patchRe.exec(htmlText))) {
+      var patchAttrs = parseXmlAttrs(patchMatch[1]);
+      var res = applyPatch(
+        patchAttrs.target,
+        patchMatch[2],
+        patchAttrs.mode || 'morph',
+        patchAttrs.namespace || 'html'
+      );
+      if (res && res.success) appliedCount++;
+    }
 
-      var res = applyPatch(target, content, mode, ns);
-      if (res.success) appliedCount++;
-    });
-
-    // 2. Signals
-    if (signalsEl) {
-      var sigText = signalsEl.textContent.trim();
-      var onlyIfMissing = signalsEl.hasAttribute('only-if-missing');
+    var sigMatch = /<vx-signals\b([^>]*)>([\s\S]*?)<\/vx-signals>/i.exec(htmlText);
+    if (sigMatch) {
+      var sigAttrs = parseXmlAttrs(sigMatch[1]);
+      var sigText = sigMatch[2].trim();
       if (sigText) {
         try {
-          patchSignals(JSON.parse(sigText), onlyIfMissing);
+          patchSignals(JSON.parse(sigText), Object.prototype.hasOwnProperty.call(sigAttrs, 'only-if-missing'));
         } catch (e) {
           console.error('Invalid <vx-signals> payload', e);
         }
       }
     }
 
-    // 3. Directive
-    if (directiveEl) {
-      // Redirect
-      var redirect = directiveEl.getAttribute('redirect');
+    var dirMatch = /<vx-directive\b([^>]*)\s*\/?>/i.exec(htmlText);
+    var dirAttrs = dirMatch ? parseXmlAttrs(dirMatch[1]) : null;
+
+    if (dirAttrs) {
+      var redirect = dirAttrs.redirect;
       if (redirect) {
-        // Validate same-origin or relative
         try {
           var dest = new URL(redirect, window.location.href);
           if (dest.origin === window.location.origin) {
@@ -554,58 +585,56 @@
         } catch (_) {}
       }
 
-      // Reload
-      if (directiveEl.getAttribute('reload') === '1') {
+      if (dirAttrs.reload === '1') {
         window.location.reload();
         return;
       }
 
-      // History
-      var pushUrl = directiveEl.getAttribute('push-url');
-      var replaceUrl = directiveEl.getAttribute('replace-url');
+      var pushUrl = dirAttrs['push-url'];
+      var replaceUrl = dirAttrs['replace-url'];
       if (pushUrl) {
         window.history.pushState({}, '', pushUrl);
       } else if (replaceUrl) {
         window.history.replaceState({}, '', replaceUrl);
       }
 
-      // Title
-      var title = directiveEl.getAttribute('title');
-      if (title) document.title = title;
+      if (dirAttrs.title) document.title = dirAttrs.title;
+      if (dirAttrs.announce) announceText(dirAttrs.announce);
 
-      // Announce
-      var announce = directiveEl.getAttribute('announce');
-      if (announce) announceText(announce);
-
-      // Focus
-      var focusTarget = directiveEl.getAttribute('focus');
+      var focusTarget = dirAttrs.focus;
       if (userInitiated && focusTarget) {
         var elToFocus = document.querySelector(focusTarget);
         if (elToFocus && elToFocus.focus) elToFocus.focus();
       }
 
-      // Scroll
-      var scrollTarget = directiveEl.getAttribute('scroll');
+      var scrollTarget = dirAttrs.scroll;
       if (scrollTarget) {
-        var behavior = directiveEl.getAttribute('scroll-behavior') || 'instant';
-        var block = directiveEl.getAttribute('scroll-block') || 'start';
-        var inline = directiveEl.getAttribute('scroll-inline') || 'nearest';
+        var behavior = dirAttrs['scroll-behavior'] || 'instant';
+        var block = dirAttrs['scroll-block'] || 'start';
+        var inline = dirAttrs['scroll-inline'] || 'nearest';
         if (scrollTarget === 'top') {
           window.scrollTo({ top: 0, behavior: behavior });
         } else {
           var scrollEl = document.querySelector(scrollTarget);
           if (scrollEl && scrollEl.scrollIntoView) {
             scrollEl.scrollIntoView({ behavior: behavior, block: block, inline: inline });
-            if (directiveEl.getAttribute('scroll-focus') === '1' && scrollEl.focus) {
+            if (dirAttrs['scroll-focus'] === '1' && scrollEl.focus) {
               scrollEl.focus();
             }
           }
         }
       }
     } else if (userInitiated) {
-      // Default focus restoration
       if (triggerEl && document.body.contains(triggerEl) && triggerEl.focus) {
         triggerEl.focus();
+      }
+    }
+
+    if (appliedCount === 0 && userInitiated && triggerEl) {
+      var fallback = triggerEl.getAttribute('href') || triggerEl.getAttribute('action');
+      if (fallback) {
+        window.location.href = fallback;
+        return;
       }
     }
 
@@ -744,11 +773,12 @@
       }
 
       var contentType = res.headers.get('Content-Type') || '';
-      if (contentType.indexOf('text/vnd.vaxel-patch+html') !== -1 || contentType.indexOf('text/html') !== -1) {
+      if (contentType.indexOf('text/vnd.vaxel-patch+html') !== -1) {
         return res.text().then(function (html) {
           processPatchDocument(html, true, el);
         });
       }
+      window.location.href = url;
     }).catch(function (err) {
       inFlightRequests.delete(el);
       if (indicatorEl) {

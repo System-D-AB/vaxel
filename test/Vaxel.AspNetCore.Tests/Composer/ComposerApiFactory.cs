@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Vaxel.AspNetCore.Tests.Composer;
 
-public sealed class ComposerApiFactory : WebApplicationFactory<Program>
+public sealed class ComposerApiFactory : WebApplicationFactory<global::Vaxel.AspNetCore.Tests.Fixtures.ComposerHost.Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

@@ -1,0 +1,8 @@
+@model (int Id, string Title, string Approver)
+
+<tr id="sub-@Model.Id" style="border-bottom: 1px solid #334155;">
+    <td style="padding: 8px;">#@Model.Id</td>
+    <td style="padding: 8px;">@Model.Title</td>
+    <td style="padding: 8px;"><span style="color: #34d399;">Approved by @Model.Approver</span></td>
+    <td style="padding: 8px;"><span style="color: #94a3b8;">Locked</span></td>
+</tr>

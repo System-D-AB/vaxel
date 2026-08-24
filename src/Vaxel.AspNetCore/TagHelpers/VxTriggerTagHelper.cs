@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 namespace Vaxel.TagHelpers;
 
 /// <summary>
-/// Tag Helper for Växel HTTP triggers (vx-get, vx-post, vx-put, vx-patch, vx-delete).
+/// Tag Helper for vaxel HTTP triggers (vx-get, vx-post, vx-put, vx-patch, vx-delete).
 /// Enforces degradation on valid interactive HTML elements (a, form, button).
 /// </summary>
 [HtmlTargetElement("*", Attributes = "vx-get")]
@@ -34,7 +34,7 @@ public sealed class VxTriggerTagHelper : TagHelper
         // Security check: no inline onclick or javascript: URLs
         if (output.Attributes.ContainsName("onclick"))
         {
-            throw new VaxelTagHelperException("Rule R2 violation: inline onclick handler is prohibited in Växel.");
+            throw new VaxelTagHelperException("Rule R2 violation: inline onclick handler is prohibited in vaxel.");
         }
 
         if (output.Attributes.TryGetAttribute("href", out var hrefAttr) &&

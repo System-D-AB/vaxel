@@ -12,7 +12,7 @@ namespace Vaxel;
 public static class VaxelEndpointRouteBuilderExtensions
 {
     /// <summary>
-    /// Maps the Växel SSE stream endpoint for real-time server push updates.
+    /// Maps the vaxel SSE stream endpoint for real-time server push updates.
     /// </summary>
     public static IEndpointConventionBuilder MapVaxelStream(
         this IEndpointRouteBuilder endpoints,

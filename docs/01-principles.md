@@ -37,13 +37,13 @@ Signals **are not**:
 - authority — the server never trusts a signal for a permission, an identity, a price or a total. Signals are user-editable by definition;
 - a render tree — bindings toggle text, attributes, classes and visibility on elements the *server* produced.
 
-**Derivations are computed on the server.** Where Datastar writes `data-show="$count > 3"`, Växel patches a signal or a fragment because the server already knows the answer. This is the single reduction that removes the expression language, and with it the CSP problem, the parser, the second engine and the parity test suite.
+**Derivations are computed on the server.** Where Datastar writes `data-show="$count > 3"`, vaxel patches a signal or a fragment because the server already knows the answer. This is the single reduction that removes the expression language, and with it the CSP problem, the parser, the second engine and the parity test suite.
 
 ## Non-goals
 
 - **Client-side routing.** Browser navigation is the model. `PushUrl` updates history; the back button does what it always did.
-- **Offline.** A Växel app is online by definition; its rendering authority is on the server.
-- **A component model on the client.** If a screen truly needs local component logic (a drag-reorder canvas, a chart, a map), write a small island in ordinary JS or TypeScript and mount it. Växel gets out of the way and preserves its DOM across morphs.
+- **Offline.** A vaxel app is online by definition; its rendering authority is on the server.
+- **A component model on the client.** If a screen truly needs local component logic (a drag-reorder canvas, a chart, a map), write a small island in ordinary JS or TypeScript and mount it. vaxel gets out of the way and preserves its DOM across morphs.
 - **Replacing Blazor.** Static Razor Components are supported as fragment sources; interactive Blazor is a different product with a different bargain.
 - **Universal adoption of one swap library.** The client agent is replaceable behind the Tag Helper layer; the protocol is the contract.
 

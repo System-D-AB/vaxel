@@ -1,7 +1,7 @@
 namespace Vaxel;
 
 /// <summary>
-/// Configuration options for Växel.
+/// Configuration options for vaxel.
 /// </summary>
 public sealed class VaxelOptions
 {

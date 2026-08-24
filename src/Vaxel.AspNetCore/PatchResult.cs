@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Vaxel;
 
 /// <summary>
-/// An <see cref="IResult"/> and <see cref="IActionResult"/> that renders a Växel patch document.
+/// An <see cref="IResult"/> and <see cref="IActionResult"/> that renders a vaxel patch document.
 /// </summary>
 public sealed class PatchResult : IResult, IActionResult
 {

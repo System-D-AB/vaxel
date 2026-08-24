@@ -1,5 +1,5 @@
 /**
- * Växel v0.1 Temporary htmx Bridge Driver
+ * vaxel v0.1 Temporary htmx Bridge Driver
  * 
  * NOTE: This is a temporary adapter for milestone v0.1 that bridges vx-* attributes
  * to htmx and Idiomorph. It will be replaced by the native 12 KB vaxel.js agent in v0.2.

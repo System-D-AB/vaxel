@@ -4,7 +4,7 @@ Security is the reason this framework exists in the shape it does. The rules bel
 
 ## Content Security Policy
 
-A Växel application must be able to run under:
+A vaxel application must be able to run under:
 
 ```
 Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'

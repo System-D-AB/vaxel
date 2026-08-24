@@ -20,4 +20,14 @@ public sealed class ComposerHostSmokeTests : IClassFixture<ComposerApiFactory>
         Assert.Contains("hello-text", html);
         Assert.Contains("world", html);
     }
+
+    [Fact]
+    public async Task VaxelJs_Returns_200_WithJavascriptContentType()
+    {
+        var response = await _client.GetAsync("/_vaxel/vaxel.js");
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/javascript; charset=utf-8", response.Content.Headers.ContentType?.ToString());
+        var js = await response.Content.ReadAsStringAsync();
+        Assert.Contains("vx:after-apply", js);
+    }
 }

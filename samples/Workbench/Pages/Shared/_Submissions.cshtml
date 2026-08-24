@@ -1,0 +1,35 @@
+@model dynamic
+
+<h3>Submissions</h3>
+<p style="color: #94a3b8;">A governed action. <strong>Approve</strong> on #101 checks the Approver role on the server (not a signal). Sign in as Alice to succeed; as Bob or signed-out you get a red refusal in the bar above. #102 is already locked.</p>
+<table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+    <thead>
+        <tr style="border-bottom: 1px solid #334155; text-align: left;">
+            <th style="padding: 8px;">ID</th>
+            <th style="padding: 8px;">Title</th>
+            <th style="padding: 8px;">Status</th>
+            <th style="padding: 8px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr id="sub-101" style="border-bottom: 1px solid #334155;">
+            <td style="padding: 8px;">#101</td>
+            <td style="padding: 8px;">Quarterly Budget Request</td>
+            <td style="padding: 8px;"><span style="color: #fbbf24;">Pending</span></td>
+            <td style="padding: 8px;">
+                <form method="post" action="/submissions/101/approve" vx-post vx-target="#sub-101" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit">Approve</button>
+                </form>
+            </td>
+        </tr>
+        <tr id="sub-102" style="border-bottom: 1px solid #334155;">
+            <td style="padding: 8px;">#102</td>
+            <td style="padding: 8px;">Cloud Infrastructure Expansion</td>
+            <td style="padding: 8px;"><span style="color: #34d399;">Approved</span></td>
+            <td style="padding: 8px;">
+                <span style="color: #94a3b8;">Locked</span>
+            </td>
+        </tr>
+    </tbody>
+</table>

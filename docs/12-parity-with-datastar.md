@@ -1,8 +1,8 @@
 # 12 — Parity with Datastar: the goal, the inventory, the scoreboard
 
-**Goal (owner ruling, 2026-08-23): Växel matches Datastar feature for feature.** Not "inspired by", not "a subset with different priorities" — an application a team could build on Datastar must be buildable on Växel, with the same capabilities available to it.
+**Goal (owner ruling, 2026-08-23): vaxel matches Datastar feature for feature.** Not "inspired by", not "a subset with different priorities" — an application a team could build on Datastar must be buildable on vaxel, with the same capabilities available to it.
 
-The single constraint that shapes *how* a feature is matched: Växel does not evaluate strings on the client (R2). So parity is measured on **outcome**, not syntax. For every Datastar feature, this document names the Växel construct that achieves the same user-visible result, and where the construct is a server round trip instead of a client evaluation, it says so plainly rather than claiming equivalence it does not have.
+The single constraint that shapes *how* a feature is matched: vaxel does not evaluate strings on the client (R2). So parity is measured on **outcome**, not syntax. For every Datastar feature, this document names the vaxel construct that achieves the same user-visible result, and where the construct is a server round trip instead of a client evaluation, it says so plainly rather than claiming equivalence it does not have.
 
 Progress is measured, not asserted: [`parity/SCOREBOARD.md`](../parity/SCOREBOARD.md) carries the current counts, and [13 — Test adoption](13-test-adoption.md) explains where the tests come from.
 
@@ -10,7 +10,7 @@ Progress is measured, not asserted: [`parity/SCOREBOARD.md`](../parity/SCOREBOAR
 
 ## 1. Attribute plugins (17 in `library/src/plugins/attributes`)
 
-| # | Datastar | Växel construct | Parity | How it is proven |
+| # | Datastar | vaxel construct | Parity | How it is proven |
 |---|---|---|---|---|
 | 1 | `attr` | `vx-attr:<name>="signal"` | **Full** | Fixture per attribute type incl. boolean attributes |
 | 2 | `bind` | `vx-bind` (+ `-event`, `-prop`) | **Full** | Fixtures: text, number, checkbox, radio, select, multi-select, file |
@@ -30,11 +30,11 @@ Progress is measured, not asserted: [`parity/SCOREBOARD.md`](../parity/SCOREBOAR
 | 16 | `style` | `vx-style:<prop>="signal"` (CSSOM) | **Full** | Fixture; never concatenated into a `style` string |
 | 17 | `text` | `vx-text="signal"` | **Full** | Fixture; value never parsed as HTML |
 
-**13 full, 4 by outcome.** All four "by outcome" are the same thing: Datastar runs an expression on the client, Växel either has the server answer or hands it to ~10 lines of island JavaScript. An application can do everything; the *authoring* differs.
+**13 full, 4 by outcome.** All four "by outcome" are the same thing: Datastar runs an expression on the client, vaxel either has the server answer or hands it to ~10 lines of island JavaScript. An application can do everything; the *authoring* differs.
 
 ## 2. Pro attributes (10)
 
-| Datastar | Växel | Parity |
+| Datastar | vaxel | Parity |
 |---|---|---|
 | `persist` | `vx-persist` / `-session` (explicit name lists) | **Full** |
 | `query-string` | `vx-url-sync` (+ `-history`) | **Full** |
@@ -49,7 +49,7 @@ Progress is measured, not asserted: [`parity/SCOREBOARD.md`](../parity/SCOREBOAR
 
 ## 3. Actions (4 in `library/src/plugins/actions`)
 
-| Datastar | What it does | Växel |
+| Datastar | What it does | vaxel |
 |---|---|---|
 | `fetch` (`@get`, `@post`, …) | Issues the request from inside an expression | `vx-get` / `vx-post` / … as attributes. **Full** — and one fewer concept, since there is no expression to host the call |
 | `peek` | Read a signal without subscribing | Internal to the store; no authoring surface needed. **N/A by construction** |
@@ -58,7 +58,7 @@ Progress is measured, not asserted: [`parity/SCOREBOARD.md`](../parity/SCOREBOAR
 
 ## 4. Watchers, engine and protocol
 
-| Datastar | Växel | Parity |
+| Datastar | vaxel | Parity |
 |---|---|---|
 | `patchElements` watcher | `<vx-patch>` application | **Full** — modes matched: `outer`, `inner`, `replace`, `prepend`, `append`, `before`, `after`, `remove`, plus our `morph` default |
 | `patchSignals` watcher | `<vx-signals>` | **Full**, incl. `onlyIfMissing` and delete-by-null |

@@ -1,9 +1,9 @@
 ---
-description: Växel contract — four rules and where truth lives
+description: vaxel contract — four rules and where truth lives
 alwaysApply: true
 ---
 
-# Växel contract
+# vaxel contract
 
 `docs/` is the framework contract. `specs/` is the implementation backlog. Do not mix them.
 

@@ -1,0 +1,5 @@
+@model (int Id, string Title, string Author)
+
+<h4 id="prop-@Model.Id-title">Proposal #@Model.Id: @Model.Title</h4>
+<p>Author: @Model.Author</p>
+<a href="/proposals/@Model.Id/edit" vx-get vx-target="#prop-@Model.Id">Edit Proposal</a>

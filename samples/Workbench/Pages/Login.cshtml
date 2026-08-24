@@ -1,0 +1,26 @@
+@page "/login"
+@model Workbench.Pages.LoginModel
+@{
+    ViewData["Title"] = "Workbench Sign In";
+}
+
+<h3>Workbench Identity Sign In</h3>
+<p>Sign in to test governed actions and role permissions.</p>
+
+<div style="display: flex; gap: 1.5rem; margin-top: 1.5rem;">
+    <div style="background: #0f172a; padding: 1.5rem; border-radius: 8px; border: 1px solid #334155; width: 220px;">
+        <h4>Alice (Approver)</h4>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Holds the <strong>Approver</strong> role. Can approve budget submissions.</p>
+        <form method="post" asp-page-handler="SignInAlice">
+            <button type="submit" style="width: 100%;">Sign in as Alice</button>
+        </form>
+    </div>
+
+    <div style="background: #0f172a; padding: 1.5rem; border-radius: 8px; border: 1px solid #334155; width: 220px;">
+        <h4>Bob (Viewer)</h4>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Holds the <strong>Viewer</strong> role. Submission approval is refused.</p>
+        <form method="post" asp-page-handler="SignInBob">
+            <button type="submit" style="width: 100%;">Sign in as Bob</button>
+        </form>
+    </div>
+</div>

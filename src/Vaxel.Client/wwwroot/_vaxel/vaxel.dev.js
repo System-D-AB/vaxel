@@ -1,5 +1,5 @@
 /**
- * Växel Development Overlay (v0.4)
+ * vaxel Development Overlay (v0.4)
  * Development-only diagnostic tool for tracking morph patches, ignored targets, and signal diffs.
  * Excluded from production bundle. Zero-eval, strict CSP compliant.
  */
@@ -30,7 +30,7 @@
     header.style.fontWeight = 'bold';
     header.style.marginBottom = '6px';
     header.style.color = '#61afef';
-    header.textContent = '⚡ Växel Dev Inspector';
+    header.textContent = '⚡ vaxel Dev Inspector';
     panel.appendChild(header);
 
     var content = document.createElement('div');

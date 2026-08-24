@@ -38,3 +38,7 @@ Desktop.ini
 .env.*
 *.pfx
 appsettings.*.local.json
+
+# Implementation packets (local backlog; contract is docs/)
+specs/
+

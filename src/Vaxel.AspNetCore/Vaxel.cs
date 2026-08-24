@@ -4,12 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Vaxel;
 
 /// <summary>
-/// Core helpers for Växel request routing and response handling.
+/// Core helpers for vaxel request routing and response handling.
 /// </summary>
 public static class Vaxel
 {
     /// <summary>
-    /// Determines whether the given HTTP context represents an active Växel agent request.
+    /// Determines whether the given HTTP context represents an active vaxel agent request.
     /// </summary>
     public static bool IsVaxelRequest(HttpContext httpContext)
     {
@@ -39,7 +39,7 @@ public static class Vaxel
     }
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static IActionResult PageOrPatch(
         HttpContext httpContext,
@@ -54,7 +54,7 @@ public static class Vaxel
     }
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static async Task<IActionResult> PageOrPatch(
         HttpContext httpContext,
@@ -71,7 +71,7 @@ public static class Vaxel
     }
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static Task<IActionResult> PageOrPatch(
         HttpContext httpContext,
@@ -80,7 +80,7 @@ public static class Vaxel
         PageOrPatch(httpContext, () => Task.FromResult(page()), patch);
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static Task<IActionResult> PageOrPatch(
         HttpContext httpContext,
@@ -89,7 +89,7 @@ public static class Vaxel
         PageOrPatch(httpContext, page, () => Task.FromResult(patch()));
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static IResult PageOrPatch(
         HttpContext httpContext,
@@ -104,7 +104,7 @@ public static class Vaxel
     }
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static async Task<IResult> PageOrPatch(
         HttpContext httpContext,
@@ -121,7 +121,7 @@ public static class Vaxel
     }
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static Task<IResult> PageOrPatch(
         HttpContext httpContext,
@@ -130,7 +130,7 @@ public static class Vaxel
         PageOrPatch(httpContext, () => Task.FromResult(page()), patch);
 
     /// <summary>
-    /// Executes the patch branch if the request is a Växel agent request; otherwise executes the page branch.
+    /// Executes the patch branch if the request is a vaxel agent request; otherwise executes the page branch.
     /// </summary>
     public static Task<IResult> PageOrPatch(
         HttpContext httpContext,

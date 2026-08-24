@@ -6,6 +6,9 @@
     <Project Path="src/Vaxel.Datastar/Vaxel.Datastar.csproj" />
     <Project Path="src/Vaxel.Testing/Vaxel.Testing.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Workbench/Workbench.csproj" />
+  </Folder>
   <Folder Name="/test/">
     <Project Path="test/Vaxel.AspNetCore.Tests/Vaxel.AspNetCore.Tests.csproj" />
     <Project Path="test/Vaxel.Browser.Tests/Vaxel.Browser.Tests.csproj" />

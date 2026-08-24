@@ -156,4 +156,4 @@ await push.PushAsync(PushScope.User(userId),
 
 - Response buffering must be disabled on the stream route; the SSE endpoint sets the headers and calls `DisableBuffering` itself, but reverse proxies need their own configuration and the docs must say which for the common ones.
 - Idle timeouts on managed platforms terminate long streams; the heartbeat default is chosen to sit under the tightest common value, and it is configurable for the rest.
-- Nothing else in the framework holds a connection, so a Växel app scales to zero exactly like a plain MVC app when no stream is open.
+- Nothing else in the framework holds a connection, so a vaxel app scales to zero exactly like a plain MVC app when no stream is open.

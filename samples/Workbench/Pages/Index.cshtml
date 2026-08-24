@@ -1,0 +1,22 @@
+@page
+@model Workbench.Pages.IndexModel
+@{
+    ViewData["Title"] = "Workbench Dashboard";
+}
+
+@if (Model.Tab == "submissions")
+{
+    <partial name="_Submissions" />
+}
+else if (Model.Tab == "proposals")
+{
+    <partial name="_Proposals" />
+}
+else if (Model.Tab == "settings")
+{
+    <partial name="_Settings" />
+}
+else
+{
+    <partial name="_Overview" />
+}

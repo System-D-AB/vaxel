@@ -1,0 +1,9 @@
+@page "/proposals/{id:int}/edit"
+@model Workbench.Pages.ProposalsModel
+@{
+    ViewData["Title"] = $"Edit Proposal #{Model.Id}";
+}
+
+<section id="proposals" vx-region>
+    <partial name="_Proposals" model="@Model.Id" />
+</section>

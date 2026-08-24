@@ -4,10 +4,10 @@ using System.Text.Json;
 namespace Vaxel.Datastar;
 
 /// <summary>
-/// Converts Växel patch documents to Datastar SSE event frames.
+/// Converts vaxel patch documents to Datastar SSE event frames.
 /// <para>
 /// NOTE: The Datastar client requires 'unsafe-eval' in Content-Security-Policy (CSP) to evaluate client-side expressions.
-/// This is not Växel's default security architecture (Rule R2).
+/// This is not vaxel's default security architecture (Rule R2).
 /// </para>
 /// </summary>
 public static class DatastarSseWriter
