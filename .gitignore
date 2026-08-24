@@ -21,6 +21,7 @@ coverage/
 *.nupkg
 **/packages/*
 !**/packages/build/
+artifacts/
 
 # Node (client agent, later)
 node_modules/

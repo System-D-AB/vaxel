@@ -2,12 +2,20 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <Description>ASP.NET Core integration and hypermedia primitives for Växel (Zero-eval, progressive enhancement, scoped push updates).</Description>
+    <PackageTags>vaxel;aspnetcore;hypermedia;sse;razor;signals;morph</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <InternalsVisibleTo Include="Vaxel.AspNetCore.Tests" />
     <EmbeddedResource Include="wwwroot\**\*" />
+    <ProjectReference Include="..\Vaxel.Client\Vaxel.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

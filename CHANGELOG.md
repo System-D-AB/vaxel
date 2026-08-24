@@ -8,6 +8,7 @@ The specification is versioned because it is the contract. Every entry says what
 
 - **Name in docs and samples is `vaxel`.** The umlaut spelling is not used in the contract, README, cookbook, or Workbench copy. Package and namespace prefix remain `Vaxel`.
 - **Implementation handoff** moved to [`specs/HANDOFF.md`](specs/HANDOFF.md). The root README is the public intro with a copy-paste example, not the build brief.
+- **Four Product NuGet Packages (`1.0.0`)** — `Vaxel.AspNetCore`, `Vaxel.Client`, `Vaxel.Testing`, and `Vaxel.Analyzers` with MIT licence, distinct package READMEs, and static web assets (`vaxel.js`). Repository: [github.com/System-D-AB/vaxel](https://github.com/System-D-AB/vaxel). `Vaxel.Datastar` is excluded (`IsPackable=false`).
 - **Reference Application (`samples/Workbench`)** — fully featured reference application demonstrating tabbed mounted layout, zero-JS progressive degradation, strongly typed signal schema validation, governed action refusals (`Patch.Refused`), and live SSE push.
 - **Protocol 1 Frozen (`VX-Protocol: 1`)** — patch document schema (`<vx-patch>`, `<vx-signals>`, `<vx-directive>`), swap modes, headers, and sync policies are locked for v1.x.
 - **Performance Benchmarks** — documented in `samples/Workbench/BENCHMARK.md`: ~86%–89% payload size reduction and ~4.5x higher server throughput compared to full page re-renders with constant zero-circuit server memory.

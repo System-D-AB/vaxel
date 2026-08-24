@@ -1,6 +1,6 @@
 # src/
 
-Product packages. Types arrive in later `specs/` packets; these projects must compile empty.
+Product packages. Repository: [github.com/System-D-AB/vaxel](https://github.com/System-D-AB/vaxel).
 
 | Project | Package ([docs/05](../docs/05-dotnet-api.md)) |
 |---|---|

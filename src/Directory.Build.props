@@ -2,5 +2,15 @@
   <Import Project="..\Directory.Build.props" />
   <PropertyGroup>
     <IsPackable>true</IsPackable>
+    <Version>1.0.0</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>vaxel contributors</Authors>
+    <Company>System D AB</Company>
+    <Copyright>Copyright (c) 2026 System D AB</Copyright>
+    <PackageProjectUrl>https://github.com/System-D-AB/vaxel</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/System-D-AB/vaxel</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <NoWarn>$(NoWarn);NU5119</NoWarn>
   </PropertyGroup>
 </Project>

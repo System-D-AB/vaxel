@@ -4,13 +4,15 @@ The half that matters. Everything here is ordinary ASP.NET Core: no source gener
 
 ## Packages
 
-| Package | Contents | Depends on |
-|---|---|---|
-| `Vaxel.AspNetCore` | `IFragmentComposer`, `Patch`/`PatchResult`, signal binding, Tag Helpers, SSE endpoint, DI | ASP.NET Core only |
-| `Vaxel.Client` | The agent + morph as static assets (`wwwroot/_vaxel/vaxel.js`), served via static web assets | — |
-| `Vaxel.Testing` | Patch assertions, the page-parity harness, a fake composer | xUnit-agnostic |
+| Package | Contents | Depends on | Install |
+|---|---|---|---|
+| `Vaxel.AspNetCore` | `IFragmentComposer`, `Patch`/`PatchResult`, signal binding, Tag Helpers, SSE endpoint, DI | ASP.NET Core + `Vaxel.Client` | Required (web apps) |
+| `Vaxel.Client` | Pre-compiled agent + morph runtime (`wwwroot/_vaxel/vaxel.js`), static web assets | — | Transitive; do not reference directly |
+| `Vaxel.Testing` | Patch assertions, the page-parity harness, fake composer, SSE stream client | `Vaxel.AspNetCore` | Test projects |
+| `Vaxel.Analyzers` | Roslyn analyzers and diagnostic rules (`VAXEL001`–`VAXEL003`) | — | Opt-in development dependency (`PrivateAssets="all"`) |
+| `Vaxel.Datastar` | Conformance adapter for Datastar SDK test suite | `Vaxel.AspNetCore` | **Not packed in v1.0** (repo-only) |
 
-Target frameworks: current LTS and current. No dependency on any client build toolchain.
+Target frameworks: current LTS and current (.NET 10). No dependency on any client build toolchain or npm at build/restore time.
 
 ## Registration
 
