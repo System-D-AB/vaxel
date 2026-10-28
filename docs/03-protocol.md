@@ -41,6 +41,8 @@ If the bag exceeds `MaxSignalsBytes` (default 8 KB) the agent omits it and sets 
 
 The framework's promise is that .NET's own machinery keeps working; a bespoke envelope would have broken exactly the part developers use most.
 
+A `GET` (or `HEAD`) trigger carries no body: a `vx-get` **form** serialises its fields into the query string (merged with any query the action already holds), and a non-form `GET` trigger's `vx-vals-*` are added to the query the same way. So a filter or search form reaches the handler with its values, exactly as a plain `method="get"` form would without the agent.
+
 ### Concurrency
 
 *Revision v0.2 — previously unspecified, which left the most common real-world race undefined.*
@@ -133,6 +135,8 @@ One JSON object, merged into the store (shallow, key by key). `null` deletes a k
 | `reload` | `1` — full page reload (used after sign-out, version bumps) |
 
 At most one `<vx-directive>` per document. Directives apply after all patches.
+
+Directive attribute values are HTML-encoded on the wire (they are attribute values) and the agent **decodes** them before use: a `push-url` of `/a?x=1&y=2` is written `push-url="/a?x=1&amp;y=2"` and pushed as `/a?x=1&y=2`; a `title` of `a · b` round-trips through `&#xB7;`. The agent reads directive attributes through the DOM parser, so any value the server can pass is restored exactly.
 
 ## Refusals
 

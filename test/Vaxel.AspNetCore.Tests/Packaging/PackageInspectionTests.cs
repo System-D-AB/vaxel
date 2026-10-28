@@ -31,20 +31,20 @@ public sealed class PackageInspectionTests
 
         var files = Directory.GetFiles(nupkgDir, "*.nupkg").Select(Path.GetFileName).ToList();
 
-        Assert.Contains("Vaxel.AspNetCore.1.0.0.nupkg", files);
-        Assert.Contains("Vaxel.Client.1.0.0.nupkg", files);
-        Assert.Contains("Vaxel.Testing.1.0.0.nupkg", files);
-        Assert.Contains("Vaxel.Analyzers.1.0.0.nupkg", files);
+        Assert.Contains("Vaxel.AspNetCore.1.1.0.nupkg", files);
+        Assert.Contains("Vaxel.Client.1.1.0.nupkg", files);
+        Assert.Contains("Vaxel.Testing.1.1.0.nupkg", files);
+        Assert.Contains("Vaxel.Analyzers.1.1.0.nupkg", files);
 
         Assert.DoesNotContain(files, f => f!.Contains("Datastar", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(4, files.Count(f => f!.EndsWith(".nupkg")));
     }
 
     [Theory]
-    [InlineData("Vaxel.AspNetCore.1.0.0.nupkg", "Vaxel.AspNetCore")]
-    [InlineData("Vaxel.Client.1.0.0.nupkg", "Vaxel.Client")]
-    [InlineData("Vaxel.Testing.1.0.0.nupkg", "Vaxel.Testing")]
-    [InlineData("Vaxel.Analyzers.1.0.0.nupkg", "Vaxel.Analyzers")]
+    [InlineData("Vaxel.AspNetCore.1.1.0.nupkg", "Vaxel.AspNetCore")]
+    [InlineData("Vaxel.Client.1.1.0.nupkg", "Vaxel.Client")]
+    [InlineData("Vaxel.Testing.1.1.0.nupkg", "Vaxel.Testing")]
+    [InlineData("Vaxel.Analyzers.1.1.0.nupkg", "Vaxel.Analyzers")]
     public void Nupkg_ContainsReadme_AndPackageSpecificInfo(string packageFileName, string expectedId)
     {
         var packagePath = Path.Combine(GetArtifactsDir(), packageFileName);
@@ -67,7 +67,7 @@ public sealed class PackageInspectionTests
     [Fact]
     public void ClientNupkg_ContainsVaxelJs()
     {
-        var packagePath = Path.Combine(GetArtifactsDir(), "Vaxel.Client.1.0.0.nupkg");
+        var packagePath = Path.Combine(GetArtifactsDir(), "Vaxel.Client.1.1.0.nupkg");
         Assert.True(File.Exists(packagePath), $"Package not found: {packagePath}");
 
         using var zip = ZipFile.OpenRead(packagePath);
@@ -80,7 +80,7 @@ public sealed class PackageInspectionTests
     [Fact]
     public void AnalyzersNupkg_ContainsAnalyzerDll()
     {
-        var packagePath = Path.Combine(GetArtifactsDir(), "Vaxel.Analyzers.1.0.0.nupkg");
+        var packagePath = Path.Combine(GetArtifactsDir(), "Vaxel.Analyzers.1.1.0.nupkg");
         Assert.True(File.Exists(packagePath), $"Package not found: {packagePath}");
 
         using var zip = ZipFile.OpenRead(packagePath);

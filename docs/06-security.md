@@ -18,7 +18,9 @@ Consequences the framework accepts to keep this: no expression language, no inli
 
 ## Antiforgery
 
-Every non-GET agent request carries the application's antiforgery token in its configured header. The agent reads the token from a `<meta name="…">` tag rendered by a Tag Helper, so it lives in the layout and not in each page. Token rotation on sign-in is handled by re-rendering the shell (`reload` directive), never by caching a stale token.
+Every non-GET agent request carries the application's antiforgery token in its configured header. The agent reads the token from the `<meta name="vx-csrf">` tag rendered by the antiforgery Tag Helper, so it lives in the layout and not in each page. Token rotation on sign-in is handled by re-rendering the shell (`reload` directive), never by caching a stale token.
+
+The header **name** the agent sends under is `VaxelOptions.AntiforgeryHeaderName`, default `X-CSRF`. The Tag Helper renders that name into the meta's `data-header` attribute (`<meta name="vx-csrf" content="…" data-header="X-CSRF">`), and the agent reads `data-header`, falling back to `X-CSRF` when it is absent. So `AddAntiforgery(o => o.HeaderName = "…")` and the agent agree without the view author reading the agent's source — set the two to the same name, or leave both at the default.
 
 The framework refuses to send a state-changing request without a token and reports `vx:error`, rather than sending one and letting the server 403 — the failure is then visible in development instead of only in production logs.
 

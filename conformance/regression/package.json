@@ -1,0 +1,13 @@
+{
+  "name": "vaxel-conformance-regression",
+  "private": true,
+  "version": "1.0.0",
+  "description": "jsdom regression fixtures for the v1.1.0 client-side bug fixes.",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

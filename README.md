@@ -71,83 +71,105 @@ CSP can stay `script-src 'self'`. There is no expression language, so there is n
 
 It is not a SPA, not a component framework, and not a JavaScript framework you write JavaScript in. The SPA-like feel comes from patching HTML in place, with a full page behind every fragment.
 
+## Concepts
+
+| Term | Meaning |
+|---|---|
+| **Page** | A full HTML document. What you get with no JavaScript, a refresh, or a shared link. Ordinary Razor. |
+| **Patch** | An HTML fragment document (`<vx-patch target="#pane">…</vx-patch>`). Same Razor as the page, wrapped so the agent can swap only that region. A patch is an optimisation of a page, never a capability the page lacks. |
+| **Region** | An element with an id and `vx-region` (`#pane`, `#contact`). It is a patch target **and** it must exist on the full page for that URL. |
+| **Fragment** | The inner HTML of a region, usually a Razor partial. `IFragmentComposer` renders it. |
+| **Agent** | The small script at `/_vaxel/vaxel.js`. It intercepts `vx-*` links and forms, sends `VX-Request: 1`, morphs the patch into the DOM, and updates the URL. It is not a client router. |
+| **Morph** | Identity-preserving DOM update. Matching ids keep the node; focus, caret, and dirty inputs survive when they should. |
+| **Signal** | A named JSON value on the client (`tab`, `railOpen`). Sent with every agent request in the `VX-Signals` header. Bindings can show, hide, or two-way bind it. Signals are data, never expressions, and never authority — do not authorise from them. |
+| **PageOrPatch** | One handler, two branches: full `Page()` when the browser navigated; `Patch.Ok()` when the agent asked. That is how a region stays reachable as a page. |
+| **Trigger** | A real `<a href>` or `<form>` with `vx-get` / `vx-post`. Without the agent it navigates normally. |
+| **Refusal** | `Patch.Refused` — a normal non-2xx patch (notice in `#notices`), not a thrown exception. |
+| **Stream** | One SSE connection (`vx-sse`) for server push into regions. No per-user UI tree on the server. |
+
+State lives in three places only: the **URL** (shareable), the server's **store** (domain data), and **signals** (ephemeral UI). The server does not keep a circuit or a component tree between requests.
+
 ## Attributes
 
 The vocabulary is closed. Every value is data — a URL, a selector, a signal name, a duration, a literal — never an expression. Razor writes these through Tag Helpers; the names below are what the agent reads. Exact semantics live in [docs/04](docs/04-client-attributes.md).
 
 A trigger belongs on an `<a href>`, a `<form>`, or a `<button>` inside a form, except load / visible / poll / window listeners.
 
+**Status.** The vocabulary is the full contract; the `1.0` column says what the shipped agent implements today. ✅ in 1.0 · ⬜ documented, not in 1.0 (planned for v1.1) · 🖥 server-side only. See [docs/04](docs/04-client-attributes.md).
+
 ### Triggers
 
-| Attribute | |
-|---|---|
-| `vx-get` `vx-post` `vx-put` `vx-patch` `vx-delete` | Issue that method. On `<a>` / `<form>`, defaults to `href` / `action`. |
-| `vx-on` | Event that fires the request (`click`, `submit`, `input`, …). |
-| `vx-target` | Advisory `#id` sent as `VX-Target`. The server decides what it patches. |
-| `vx-swap` | Advisory swap mode for the response. |
-| `vx-vals-*` | Extra request field, like a hidden input. Literals only: `vx-vals-tab="submissions"`. |
-| `vx-include` | Also send the fields of this `#id` form or container. |
-| `vx-confirm` | Native confirm before sending. Plain text, never markup. |
-| `vx-indicator` | Signal set `true` while this request is in flight. |
-| `vx-disable` | Disable this element (or `#id`) while in flight. |
-| `vx-sync` | Concurrent requests: `replace` (default), `queue`, `drop`, `abort`. |
-| `vx-encoding` | `json` — send `application/json` instead of form encoding. |
+| Attribute | 1.0 | |
+|---|---|---|
+| `vx-get` `vx-post` `vx-put` `vx-patch` `vx-delete` | ✅ | Issue that method. On `<a>` / `<form>`, defaults to `href` / `action`. A `vx-get` form sends its fields as the query string. |
+| `vx-on` | ⬜ | Event that fires the request (`click`, `submit`, `input`, …). |
+| `vx-target` | ✅ | Advisory `#id` sent as `VX-Target`. The server decides what it patches. |
+| `vx-swap` | ⬜ | Advisory swap mode for the response. |
+| `vx-vals-*` | ✅ | Extra request field, like a hidden input. Literals only: `vx-vals-tab="submissions"`. |
+| `vx-include` | ⬜ | Also send the fields of this `#id` form or container. |
+| `vx-confirm` | ✅ | Native confirm before sending. Plain text, never markup. |
+| `vx-indicator` | ✅ | Signal set `true` while this request is in flight. |
+| `vx-disable` | ✅ | Disable this element (or `#id`) while in flight. |
+| `vx-sync` | ✅ | Concurrent requests: `replace` (default), `queue`, `drop`, `abort`. |
+| `vx-encoding` | ✅ | `json` — send `application/json` instead of form encoding. |
 
 ### Trigger modifiers
 
-| Attribute | |
-|---|---|
-| `vx-debounce` `vx-throttle` | Coalesce or rate-limit, in ms. `vx-debounce-leading` fires on the leading edge. |
-| `vx-delay` | Wait this many ms before sending. |
-| `vx-once` | Fire at most once, then the trigger is inert. |
-| `vx-prevent` `vx-stop` | `preventDefault` / `stopPropagation`. |
-| `vx-capture` `vx-passive` | Listener options. |
-| `vx-window` `vx-document` | Attach the listener to `window` / `document` (e.g. Escape to close). |
-| `vx-outside` | Fire when the event happens outside this element (click-away). |
-| `vx-trigger-load` | Fire when the element enters the document. `vx-trigger-load-delay` waits first. |
-| `vx-trigger-visible` | Fire on viewport intersection (`-threshold`, `-exit`, `-once`). |
-| `vx-poll` | Repeat while the element exists, in ms (1 s floor). Prefer SSE. |
+All trigger modifiers are ⬜ **not in 1.0** (planned for v1.1).
+
+| Attribute | 1.0 | |
+|---|---|---|
+| `vx-debounce` `vx-throttle` | ⬜ | Coalesce or rate-limit, in ms. `vx-debounce-leading` fires on the leading edge. |
+| `vx-delay` | ⬜ | Wait this many ms before sending. |
+| `vx-once` | ⬜ | Fire at most once, then the trigger is inert. |
+| `vx-prevent` `vx-stop` | ⬜ | `preventDefault` / `stopPropagation`. |
+| `vx-capture` `vx-passive` | ⬜ | Listener options. |
+| `vx-window` `vx-document` | ⬜ | Attach the listener to `window` / `document` (e.g. Escape to close). |
+| `vx-outside` | ⬜ | Fire when the event happens outside this element (click-away). |
+| `vx-trigger-load` | ⬜ | Fire when the element enters the document. `vx-trigger-load-delay` waits first. |
+| `vx-trigger-visible` | ⬜ | Fire on viewport intersection (`-threshold`, `-exit`, `-once`). |
+| `vx-poll` | ⬜ | Repeat while the element exists, in ms (1 s floor). Prefer SSE. |
 
 ### Regions and morph
 
-| Attribute | |
-|---|---|
-| `vx-region` | This element is a patch target. Documents intent; scopes focus restoration. |
-| `vx-preserve` | Never morph this subtree — an island owns it. |
-| `vx-preserve-attr` | Attribute names kept across a morph: `vx-preserve-attr="open class"`. |
-| `vx-ignore` | Skip this element and its descendants (third-party HTML that may contain `vx-*`). |
-| `vx-ignore-self` | Ignore this element's own attributes; still process children. |
-| `vx-overwrite-dirty` | Let an incoming value replace what the user has typed. Off by default. |
-| `vx-transition-name` | Literal `view-transition-name` for the View Transition API. |
-| `vx-sse` | URL of the document's one Server-Sent Events channel. |
+| Attribute | 1.0 | |
+|---|---|---|
+| `vx-region` | 🖥 | This element is a patch target. Documents intent; scopes focus restoration. |
+| `vx-preserve` | ✅ | Never morph this subtree — an island owns it. |
+| `vx-preserve-attr` | ✅ | Attribute names kept across a morph: `vx-preserve-attr="open class"`. |
+| `vx-ignore` | ⬜ | Skip this element and its descendants (third-party HTML that may contain `vx-*`). |
+| `vx-ignore-self` | ⬜ | Ignore this element's own attributes; still process children. |
+| `vx-overwrite-dirty` | ✅ | Let an incoming value replace what the user has typed. Off by default. |
+| `vx-transition-name` | ⬜ | Literal `view-transition-name` for the View Transition API. |
+| `vx-sse` | ✅ | URL of the document's one Server-Sent Events channel. |
 
 ### Signal bindings
 
 Every binding names **one** signal. No operators, no comparisons, no dotted paths.
 
-| Attribute | |
-|---|---|
-| `vx-text` | Text content becomes the signal's value. |
-| `vx-show` | Hidden when the signal is falsy. |
-| `vx-class:<name>` | Class `<name>` present while the signal is truthy. |
-| `vx-attr:<name>` | Attribute `<name>` set to the signal; removed when `null` / `false`. |
-| `vx-style:<prop>` | Inline style via CSSOM. Prefer `vx-class`; never bind untrusted values. |
-| `vx-bind` | Two-way: input value ⇄ signal. |
-| `vx-bind-event` | Which events sync `vx-bind` (default `input` / `change`). |
-| `vx-bind-prop` | Bind an element property rather than its value. |
-| `vx-signal-set:<event>` | On that event, set a signal to a literal: `vx-signal-set:click="tab=submissions"`. |
+| Attribute | 1.0 | |
+|---|---|---|
+| `vx-text` | ✅ | Text content becomes the signal's value. |
+| `vx-show` | ✅ | Hidden when the signal is falsy. |
+| `vx-class:<name>` | ✅ | Class `<name>` present while the signal is truthy. |
+| `vx-attr:<name>` | ✅ | Attribute `<name>` set to the signal; removed when `null` / `false`. |
+| `vx-style:<prop>` | ✅ | Inline style via CSSOM. Prefer `vx-class`; never bind untrusted values. |
+| `vx-bind` | ✅ | Two-way: input value ⇄ signal. |
+| `vx-bind-event` | ⬜ | Which events sync `vx-bind` (default `input` / `change`). |
+| `vx-bind-prop` | ⬜ | Bind an element property rather than its value. |
+| `vx-signal-set:<event>` | ⬜ | On that event, set a signal to a literal: `vx-signal-set:click="tab=submissions"`. |
 
 ### Signal state
 
-| Attribute | |
-|---|---|
-| `vx-signals` | JSON seed at first paint: `vx-signals='{"tab":"overview"}'`. |
-| `vx-signals-if-missing` | Same, but do not overwrite a key that already exists. |
-| `vx-persist` | Signal names mirrored to `localStorage`. Explicit list, never a wildcard. |
-| `vx-persist-session` | Same, into `sessionStorage`. |
-| `vx-url-sync` | Signal names mirrored into the query string. `vx-url-sync-history` pushes instead of replace. |
-| `vx-match-media:<name>` | Set signal `<name>` from a media query. |
-| `vx-debug-signals` | Render the live signal bag. Development only; no-op in production. |
+| Attribute | 1.0 | |
+|---|---|---|
+| `vx-signals` | ✅ | JSON seed at first paint: `vx-signals='{"tab":"overview"}'`. |
+| `vx-signals-if-missing` | ✅ | Same, but do not overwrite a key that already exists. |
+| `vx-persist` | ✅ | Signal names mirrored to `localStorage`. Explicit list, never a wildcard. |
+| `vx-persist-session` | ✅ | Same, into `sessionStorage`. |
+| `vx-url-sync` | ✅ | Signal names mirrored into the query string. `vx-url-sync-history` (⬜) pushes instead of replace. |
+| `vx-match-media:<name>` | ⬜ | Set signal `<name>` from a media query. |
+| `vx-debug-signals` | ⬜ | Render the live signal bag. Development only; no-op in production. |
 
 ### Events
 

@@ -2,6 +2,20 @@
 
 The specification is versioned because it is the contract. Every entry says what changed **and why it was wrong**, because a spec that quietly improves teaches nobody.
 
+## v1.1.0 — 2026-10-28 · bug fixes
+
+No wire shape changed; the protocol stays at `VX-Protocol: 1`.
+
+- **Analyser `VAXEL003` scope.** The target-selector check now resolves the invocation's symbol and fires only when the method is on `Vaxel.PatchBuilder`, so `StringBuilder.Append`, `IHeaderDictionary.Append`, `string.Replace` and other same-named methods on unrelated types no longer report a diagnostic; an unresolvable receiver reports nothing. *(docs/05 § Tag Helpers / Analyzers)*
+- **Asynchronous patch writes.** A patch document is now written with asynchronous writes, so it completes on a default Kestrel host (`AllowSynchronousIO = false`), including fragments larger than the response writer's buffer. *(docs/05 § Building responses)*
+- **Directive values decode on the client.** The agent parses `<vx-directive>` through the DOM parser and reads its attributes with `getAttribute`, so HTML-encoded values round-trip: `push-url="/a?x=1&amp;y=2"` pushes `/a?x=1&y=2` and a `title` of `a &#xB7; b` shows `a · b`. Applies to `push-url`, `replace-url`, `title`, `announce`, `focus`, `scroll` and `redirect`. *(docs/03 § Directives)*
+- **`vx-get` forms send their fields.** A `vx-get` form serialises its fields into the query string, merged with any query the action already carries; a non-form GET trigger's `vx-vals-*` are added the same way; a programmatic `requestSubmit()` is intercepted. *(docs/03 § Bodies, docs/04 § Triggers)*
+- **Morph of an unrelated view clears the old view.** When the incoming fragment shares no ids with a region's current children, the morph ends with exactly the incoming children; shared ids are kept and the rest removed. *(docs/02 § Morph)*
+- **Attribute vocabulary marked by availability.** docs/04, the README and `parity/SCOREBOARD.md` now mark each attribute ✅ implemented in 1.0 · ⬜ not in 1.0 · 🖥 server-side, and `VocabularyHonestyTests` fails if the marks and the shipped bundle disagree. Tag Helpers were added for `vx-signals`, `vx-signals-if-missing`, `vx-persist`, `vx-persist-session`, `vx-confirm`, `vx-preserve` and `vx-sse`; docs/05 lists what a view still writes raw. Implementing the ⬜ attributes is a separate packet (`v1.1-triggers`). *(docs/04, docs/05, parity/SCOREBOARD.md)*
+- **Configurable antiforgery header name.** The antiforgery Tag Helper renders `VaxelOptions.AntiforgeryHeaderName` into the `vx-csrf` meta's `data-header`; the agent sends the token under that name, falling back to `X-CSRF` (the documented default) when it is absent, so `AddAntiforgery(o => o.HeaderName = …)` and the agent agree. *(docs/06 § Antiforgery)*
+
+A jsdom regression suite (`conformance/regression/`, run under `dotnet test` from `Vaxel.Client.Tests`) was added for the client-side fixes, per docs/10 §8's fixture convention.
+
 ## v1.0 — 2026-08-24 · protocol freeze and reference application
 
 **Protocol 1 is frozen.** Breaking wire changes require a major version bump and a graceful fallback to full navigation.

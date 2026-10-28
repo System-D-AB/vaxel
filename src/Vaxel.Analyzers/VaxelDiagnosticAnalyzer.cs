@@ -117,12 +117,20 @@ public sealed class VaxelDiagnosticAnalyzer : DiagnosticAnalyzer
             }
         }
 
-        // Patch.Replace / Outer / etc. target validation
+        // Patch.Replace / Outer / etc. target validation.
+        // Only fire when the invocation genuinely resolves to a Vaxel.PatchBuilder method:
+        // the same method names (Append, Replace, Remove, …) exist on StringBuilder,
+        // IHeaderDictionary, string and countless other types, and must not be flagged.
         if ((methodName == "Replace" || methodName == "Outer" || methodName == "ReplaceHard" ||
              methodName == "Inner" || methodName == "Append" || methodName == "Prepend" ||
              methodName == "Before" || methodName == "After" || methodName == "Remove" ||
              methodName == "Focus") && invocation.ArgumentList.Arguments.Count > 0)
         {
+            if (!IsPatchBuilderInvocation(context, invocation))
+            {
+                return;
+            }
+
             var firstArg = invocation.ArgumentList.Arguments[0].Expression as LiteralExpressionSyntax;
             if (firstArg?.Token.Value is string targetStr)
             {
@@ -134,5 +142,35 @@ public sealed class VaxelDiagnosticAnalyzer : DiagnosticAnalyzer
                 }
             }
         }
+    }
+
+    private const string PatchBuilderMetadataName = "Vaxel.PatchBuilder";
+
+    /// <summary>
+    /// Resolves the invoked method and returns true only when it is declared on
+    /// <c>Vaxel.PatchBuilder</c>. Returns false when the symbol cannot be resolved,
+    /// so an analyser that cannot see the receiver type stays quiet (AC-3).
+    /// </summary>
+    private static bool IsPatchBuilderInvocation(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
+    {
+        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
+        var method = symbolInfo.Symbol as IMethodSymbol;
+
+        // Unresolved: a single candidate is still a usable signal; anything less is silence.
+        if (method is null && symbolInfo.CandidateSymbols.Length == 1)
+        {
+            method = symbolInfo.CandidateSymbols[0] as IMethodSymbol;
+        }
+
+        var containingType = method?.ContainingType;
+        if (containingType is null)
+        {
+            return false;
+        }
+
+        return string.Equals(
+            containingType.ToDisplayString(),
+            PatchBuilderMetadataName,
+            StringComparison.Ordinal);
     }
 }

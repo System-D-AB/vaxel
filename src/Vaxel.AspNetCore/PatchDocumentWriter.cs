@@ -62,7 +62,18 @@ internal static class PatchDocumentWriter
 
             if (patch.Mode is not SwapMode.Remove && patch.Content is not null)
             {
-                patch.Content.WriteTo(writer, htmlEncoder);
+                // US-2: IHtmlContent.WriteTo is synchronous and, for a fragment larger than the
+                // response writer's buffer, flushes synchronously to the body — which a default
+                // Kestrel host (AllowSynchronousIO = false) rejects. Render the fragment into an
+                // in-memory writer first (no IO), then write the string asynchronously.
+                string fragmentHtml;
+                using (var fragmentWriter = new StringWriter())
+                {
+                    patch.Content.WriteTo(fragmentWriter, htmlEncoder);
+                    fragmentHtml = fragmentWriter.ToString();
+                }
+
+                await writer.WriteAsync(fragmentHtml.AsMemory(), ct).ConfigureAwait(false);
             }
 
             await writer.WriteAsync("</vx-patch>\n").ConfigureAwait(false);

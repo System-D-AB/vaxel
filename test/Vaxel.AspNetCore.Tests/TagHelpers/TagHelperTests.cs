@@ -181,4 +181,145 @@ public sealed class TagHelperTests : IClassFixture<ComposerApiFactory>
         var scriptPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "Vaxel.AspNetCore", "wwwroot", "_vaxel", "vaxel-htmx.js");
         Assert.True(File.Exists(scriptPath) || File.Exists(Path.GetFullPath(scriptPath)));
     }
+
+    // US-7: the antiforgery meta must carry the configured header name in data-header, and the
+    // agent reads it so AddAntiforgery(o => o.HeaderName = ...) and vaxel agree.
+
+    // US-6 (T14): the passthrough attributes now have Tag Helpers (the seam docs/05 promises).
+
+    [Theory]
+    [InlineData("vx-signals")]
+    [InlineData("vx-signals-if-missing")]
+    public void Signals_ValidJsonObject_PassesThrough(string attribute)
+    {
+        var output = ProcessAttributeHelper(attribute, "{\"tab\":\"overview\"}");
+        Assert.Equal("{\"tab\":\"overview\"}", output.Attributes[attribute].Value?.ToString());
+    }
+
+    [Theory]
+    [InlineData("vx-signals")]
+    [InlineData("vx-signals-if-missing")]
+    public void Signals_InvalidJson_Throws(string attribute)
+    {
+        Assert.Throws<VaxelTagHelperException>(() => ProcessAttributeHelper(attribute, "{not json"));
+    }
+
+    [Theory]
+    [InlineData("vx-signals")]
+    [InlineData("vx-signals-if-missing")]
+    public void Signals_NonObjectJson_Throws(string attribute)
+    {
+        Assert.Throws<VaxelTagHelperException>(() => ProcessAttributeHelper(attribute, "[1,2,3]"));
+    }
+
+    [Theory]
+    [InlineData("vx-persist")]
+    [InlineData("vx-persist-session")]
+    public void Persist_NameList_PassesThrough(string attribute)
+    {
+        var output = ProcessAttributeHelper(attribute, "railOpen theme");
+        Assert.Equal("railOpen theme", output.Attributes[attribute].Value?.ToString());
+    }
+
+    [Theory]
+    [InlineData("vx-persist")]
+    [InlineData("vx-persist-session")]
+    public void Persist_Wildcard_Throws(string attribute)
+    {
+        Assert.Throws<VaxelTagHelperException>(() => ProcessAttributeHelper(attribute, "*"));
+    }
+
+    [Fact]
+    public void Confirm_And_Preserve_PassThrough()
+    {
+        Assert.Equal("Delete this?", ProcessAttributeHelper("vx-confirm", "Delete this?").Attributes["vx-confirm"].Value?.ToString());
+        Assert.Equal("", ProcessAttributeHelper("vx-preserve", "").Attributes["vx-preserve"].Value?.ToString());
+    }
+
+    [Fact]
+    public void Sse_Url_PassesThrough()
+    {
+        var output = ProcessAttributeHelper("vx-sse", "/_vaxel/stream");
+        Assert.Equal("/_vaxel/stream", output.Attributes["vx-sse"].Value?.ToString());
+    }
+
+    [Fact]
+    public void Sse_Empty_Throws()
+    {
+        Assert.Throws<VaxelTagHelperException>(() => ProcessAttributeHelper("vx-sse", ""));
+    }
+
+    private static TagHelperOutput ProcessAttributeHelper(string attribute, string value)
+    {
+        TagHelper helper = attribute switch
+        {
+            "vx-signals" => new VxSignalsTagHelper(),
+            "vx-signals-if-missing" => new VxSignalsIfMissingTagHelper(),
+            "vx-persist" => new VxPersistTagHelper(),
+            "vx-persist-session" => new VxPersistSessionTagHelper(),
+            "vx-confirm" => new VxConfirmTagHelper(),
+            "vx-preserve" => new VxPreserveTagHelper(),
+            "vx-sse" => new VxSseTagHelper(),
+            _ => throw new ArgumentOutOfRangeException(nameof(attribute)),
+        };
+
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput(
+            "div",
+            [new TagHelperAttribute(attribute, value)],
+            (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        helper.Process(context, output);
+        return output;
+    }
+
+    [Fact]
+    public void Antiforgery_Meta_CarriesDefaultHeaderName()
+    {
+        var output = RenderAntiforgeryMeta(new VaxelOptions());
+
+        Assert.Equal("vx-csrf", output.Attributes["name"].Value?.ToString());
+        Assert.Equal("X-CSRF", output.Attributes["data-header"].Value?.ToString());
+    }
+
+    [Fact]
+    public void Antiforgery_Meta_CarriesConfiguredHeaderName()
+    {
+        var output = RenderAntiforgeryMeta(new VaxelOptions { AntiforgeryHeaderName = "X-My-CSRF" });
+
+        Assert.Equal("X-My-CSRF", output.Attributes["data-header"].Value?.ToString());
+    }
+
+    private static TagHelperOutput RenderAntiforgeryMeta(VaxelOptions options)
+    {
+        var antiforgery = new StubAntiforgery();
+        var tagHelper = new VaxelAntiforgeryTagHelper(
+            antiforgery,
+            Microsoft.Extensions.Options.Options.Create(options))
+        {
+            ViewContext = null
+        };
+
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput(
+            "meta",
+            [],
+            (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        tagHelper.Process(context, output);
+        return output;
+    }
+
+    private sealed class StubAntiforgery : Microsoft.AspNetCore.Antiforgery.IAntiforgery
+    {
+        public Microsoft.AspNetCore.Antiforgery.AntiforgeryTokenSet GetAndStoreTokens(Microsoft.AspNetCore.Http.HttpContext httpContext)
+            => new("token", "cookie", "field", "header");
+
+        public Microsoft.AspNetCore.Antiforgery.AntiforgeryTokenSet GetTokens(Microsoft.AspNetCore.Http.HttpContext httpContext)
+            => new("token", "cookie", "field", "header");
+
+        public Task<bool> IsRequestValidAsync(Microsoft.AspNetCore.Http.HttpContext httpContext) => Task.FromResult(true);
+        public void SetCookieTokenAndHeader(Microsoft.AspNetCore.Http.HttpContext httpContext) { }
+        public Task ValidateRequestAsync(Microsoft.AspNetCore.Http.HttpContext httpContext) => Task.CompletedTask;
+    }
 }

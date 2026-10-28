@@ -134,6 +134,25 @@ Razor never types a raw `vx-` attribute:
 
 Tag Helpers validate at compile/render time what the agent cannot: that a target is an `#id`, that a bound name is a declared signal (when a signal schema is registered), that a trigger sits on a degradable element. They are also the seam that lets the agent be replaced — or the same protocol be driven by htmx plus a morph extension — without touching a view.
 
+### Attribute coverage
+
+A Tag Helper claims every `vx-*` attribute the 1.0 agent implements:
+
+| Attribute(s) | Tag Helper |
+|---|---|
+| `vx-get` `vx-post` `vx-put` `vx-patch` `vx-delete` | `VxTriggerTagHelper` |
+| `vx-target` | `VxTargetTagHelper` |
+| `vx-region` | `VxRegionTagHelper` |
+| `vx-indicator` `vx-disable` | `VxIndicatorTagHelper` |
+| `vx-text` `vx-show` `vx-class:*` `vx-attr:*` `vx-bind` | `VxBindTagHelper` |
+| `vx-vals-*` | `VxValsTagHelper` |
+| `vx-signals` `vx-signals-if-missing` | `VxSignalsTagHelper` / `VxSignalsIfMissingTagHelper` (JSON-object validated) |
+| `vx-persist` `vx-persist-session` | `VxPersistTagHelper` / `VxPersistSessionTagHelper` (wildcard rejected) |
+| `vx-confirm` `vx-preserve` `vx-sse` | `VxConfirmTagHelper` / `VxPreserveTagHelper` / `VxSseTagHelper` |
+| `vaxel-antiforgery` | `VaxelAntiforgeryTagHelper` |
+
+**What a view still writes raw.** `vx-sync`, `vx-encoding`, `vx-style:*`, `vx-url-sync`, `vx-preserve-attr` and `vx-overwrite-dirty` are implemented by the agent but have no dedicated Tag Helper yet; write them as plain attributes. Everything marked ⬜ *not in 1.0* in [04](04-client-attributes.md) — the trigger modifiers, `vx-on`, `vx-match-media`, `vx-signal-set`, `vx-transition-name`, `vx-ignore`, the `vx-bind-*` modifiers — is inert in the 1.0 bundle and has no Tag Helper; it arrives with `v1.1-triggers`.
+
 An optional **signal schema** registers names and types so bindings can be checked and a strongly-typed record generated for `[FromSignals]`:
 
 ```csharp

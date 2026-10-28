@@ -354,6 +354,7 @@
 
       var fromNext = fromChild.nextSibling;
       var toNext = toChild.nextSibling;
+      var advanceFrom = true; // did we consume the current old node?
 
       if (fromChild.nodeType === toChild.nodeType &&
           (fromChild.nodeType === Node.TEXT_NODE || fromChild.nodeType === Node.COMMENT_NODE)) {
@@ -363,10 +364,16 @@
       } else if (fromChild.nodeType === Node.ELEMENT_NODE && toChild.nodeType === Node.ELEMENT_NODE) {
         if (fromChild.id && toChild.id && fromChild.id === toChild.id) {
           morphElement(fromChild, toChild);
-        } else if (fromChild.tagName === toChild.tagName && (!fromChild.id || !toChild.id)) {
+        } else if (fromChild.tagName === toChild.tagName && !fromChild.id && !toChild.id) {
+          // Soft match only when NEITHER side is identified. An identified old node must not
+          // be repurposed for an idless (or differently-identified) new node — doing so kept a
+          // previous screen's subtree alive when morphing to an unrelated view (US-5).
           morphElement(fromChild, toChild);
         } else {
-          // Look ahead for matching id
+          // The current old node is not this incoming node. Look ahead for an old node that
+          // carries the incoming id and relocate it; otherwise insert the incoming node here.
+          // Either way the current old node is NOT consumed — leave it for the next incoming
+          // node, so unmatched old nodes fall through to the removal pass below (US-5).
           var matchInFrom = toChild.id ? fromEl.querySelector('#' + toChild.id) : null;
           if (matchInFrom && matchInFrom.parentNode === fromEl) {
             fromEl.insertBefore(matchInFrom, fromChild);
@@ -374,12 +381,15 @@
           } else {
             fromEl.insertBefore(toChild, fromChild);
           }
+          advanceFrom = false;
         }
       } else {
         fromEl.replaceChild(toChild, fromChild);
       }
 
-      fromChild = fromNext;
+      if (advanceFrom) {
+        fromChild = fromNext;
+      }
       toChild = toNext;
     }
 
@@ -535,6 +545,25 @@
     return attrs;
   }
 
+  // Parse a single <vx-directive …> element with the DOM parser and read its attributes
+  // through getAttribute, which decodes HTML entities. The server HTML-encodes directive
+  // values (push-url, title, …); reading the raw attribute text left them encoded (US-3).
+  function parseDirectiveAttrs(elementHtml) {
+    var attrs = {};
+    try {
+      var doc = new DOMParser().parseFromString(elementHtml, 'text/html');
+      var el = doc.querySelector('vx-directive');
+      if (!el) return attrs;
+      for (var i = 0; i < el.attributes.length; i++) {
+        var a = el.attributes[i];
+        attrs[a.name.toLowerCase()] = a.value;
+      }
+    } catch (e) {
+      console.error('Invalid <vx-directive> element', e);
+    }
+    return attrs;
+  }
+
   // Extract <vx-patch> from the raw document. Do not HTML-parse the wrapper:
   // a <section>/<div> inside an unknown element can be emptied by DOMParser,
   // which looks like "clicks do nothing".
@@ -568,8 +597,8 @@
       }
     }
 
-    var dirMatch = /<vx-directive\b([^>]*)\s*\/?>/i.exec(htmlText);
-    var dirAttrs = dirMatch ? parseXmlAttrs(dirMatch[1]) : null;
+    var dirMatch = /<vx-directive\b[^>]*\/?>/i.exec(htmlText);
+    var dirAttrs = dirMatch ? parseDirectiveAttrs(dirMatch[0]) : null;
 
     if (dirAttrs) {
       var redirect = dirAttrs.redirect;
@@ -692,10 +721,12 @@
     };
     if (target) headers['VX-Target'] = target;
 
-    // CSRF meta
+    // CSRF meta. The server renders the configured antiforgery header name in data-header;
+    // fall back to X-CSRF when it is absent (US-7).
     var csrfMeta = document.querySelector('meta[name="vx-csrf"]');
     if (csrfMeta && csrfMeta.content) {
-      headers['X-CSRF'] = csrfMeta.content;
+      var csrfHeader = csrfMeta.getAttribute('data-header') || 'X-CSRF';
+      headers[csrfHeader] = csrfMeta.content;
     }
 
     // Signals payload
@@ -742,6 +773,24 @@
           headers['Content-Type'] = 'application/x-www-form-urlencoded';
         }
       }
+    } else {
+      // GET / HEAD carry their fields in the query string, merged with any query the URL
+      // already holds (US-4). A vx-get form's fields become the query; a non-form trigger's
+      // vx-vals-* are added the same way.
+      var getUrl = new URL(url, window.location.href);
+      if (el instanceof HTMLFormElement) {
+        new FormData(el).forEach(function (v, k) {
+          getUrl.searchParams.append(k, typeof v === 'string' ? v : '');
+        });
+      } else {
+        for (var gi = 0; gi < el.attributes.length; gi++) {
+          var ga = el.attributes[gi];
+          if (ga.name.indexOf('vx-vals-') === 0) {
+            getUrl.searchParams.set(ga.name.substring('vx-vals-'.length), ga.value);
+          }
+        }
+      }
+      url = getUrl.pathname + getUrl.search + getUrl.hash;
     }
 
     var evtDetail = { url: url, method: method, headers: headers, body: body };

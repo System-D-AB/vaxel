@@ -62,5 +62,10 @@ public sealed class VaxelAntiforgeryTagHelper : TagHelper
         output.Attributes.RemoveAll("vaxel-antiforgery");
         output.Attributes.SetAttribute("name", "vx-csrf");
         output.Attributes.SetAttribute("content", token ?? string.Empty);
+
+        // US-7: carry the configured antiforgery header name so the agent sends the token
+        // under the name AddAntiforgery(o => o.HeaderName = ...) expects, instead of a
+        // hard-coded "X-CSRF". The agent reads data-header and falls back to X-CSRF.
+        output.Attributes.SetAttribute("data-header", _options.AntiforgeryHeaderName);
     }
 }

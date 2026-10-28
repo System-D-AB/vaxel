@@ -54,6 +54,15 @@ app.MapGet("/patch/minimal", () =>
         .Focus("#filter");
 });
 
+// US-2 fixture: a fragment large enough to overflow HttpResponseStreamWriter's internal
+// buffer, forcing a flush to the response body mid-write. On a default Kestrel host
+// (AllowSynchronousIO = false) a synchronous write throws here; an async writer completes.
+app.MapGet("/patch/large", () =>
+{
+    var big = "<section id=\"pane\">" + string.Concat(Enumerable.Repeat("<p>row</p>", 8000)) + "</section>";
+    return Patch.Ok().Replace("#pane", new Microsoft.AspNetCore.Html.HtmlString(big));
+});
+
 app.MapPost("/patch/status-422", () =>
 {
     return Patch.Status(422)
