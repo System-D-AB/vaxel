@@ -7,7 +7,8 @@ A kitchen or operations board watches orders move from **Preparing** to **Ready*
 ## The markup
 
 ```html
-<body vx-sse="/_vaxel/stream">
+<body vx-sse="/_vaxel/stream"
+      vx-on="keydown window | key k | filter ctrlKey || metaKey | prevent | showModal #station-switcher; keydown window | key / | filter !typing | prevent | focus #order-filter">
   <main class="board" vx-signals='{"filterStation": "all"}'>
     <header>
       <h1>Kitchen Order Board</h1>

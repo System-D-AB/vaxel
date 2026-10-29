@@ -79,15 +79,15 @@ sink      = "set" ident "=" expr
 | `delay <ms>` | ✅ | `a-b---c--\|` → `--a-b---c\|` (`100`) | Shift each passing event forward in time by `<ms>` |
 | `once` | ✅ | `a-b-c----\|` → `a--------\|` | Pass the first reaching event, then silence the pipeline |
 | `distinct` | ✅ | `a-a-b-b-a\|` → `a---b---a\|` | Drop consecutive duplicate values (`event.target.value`) |
-| `key <KeyName>` | ✅ | — | Pass only when `KeyboardEvent.key === "<KeyName>"` (`Enter`, `Escape`, …) |
-| `filter <expr>` | ✅ | — | Pass only when `<expr>` evaluates to `true` via the P1 expression engine over signals + event `key`, `value`, `checked` |
+| `key <KeyName>` | ✅ | — | Pass only when `KeyboardEvent.key === "<KeyName>"` (`Enter`, `Escape`, …; single-character keys match case-insensitively) |
+| `filter <expr>` | ✅ | — | Pass only when `<expr>` evaluates to `true` via the P1 expression engine over signals + event `key`, `value`, `checked`, `ctrlKey`, `metaKey`, `altKey`, `shiftKey`, and `typing` (`true` when `event.target` is an `input`, `textarea`, `select`, or `[contenteditable]`) |
 | `prevent` / `stop` | ✅ | — | Call `event.preventDefault()` / `event.stopPropagation()` at that stage in the pipeline |
 
 #### Sinks
 
 - **Default sink (request):** when a chain does not end with an explicit sink, a passing event fires the element's HTTP verb (`vx-get`, `vx-post`, `vx-put`, `vx-patch`, `vx-delete`), or its enclosing `<form>`'s HTTP verb when `vx-on` is placed on a form control (`<input name="q" vx-on="input | debounce 200 | distinct">`).
-- **Signal sink (`set <ident> = <expr>`):** evaluates `<expr>` through the closed expression engine (with access to all signals plus `dataset.<key>` and event `key`, `value`, `checked`) and writes the result into signal `<ident>` (`vx-on="keydown window | key Escape | set open = false"`).
-- **Dialog & focus sinks (`showModal <#id>`, `close [<#id>]`, `focus <#id>`):** invoke native `<dialog>.showModal()` (focusing the first interactive control), `<dialog>.close()` (on `<#id>` or the enclosing `<dialog>`), or `el.focus()` on `<#id>`. Multiple chains on one element are separated by `;` (`vx-on="click | set confirmText = ''; click | showModal #drop-db"`).
+- **Signal sink (`set <ident> = <expr>`):** evaluates `<expr>` through the closed expression engine (with access to all signals plus `dataset.<key>` and event `key`, `value`, `checked`, `ctrlKey`, `metaKey`, `altKey`, `shiftKey`, `typing`) and writes the result into signal `<ident>` (`vx-on="keydown window | key Escape | set open = false"`).
+- **Dialog & focus sinks (`showModal <#id>`, `close [<#id>]`, `focus <#id>`):** invoke native `<dialog>.showModal()` (focusing the first interactive control), `<dialog>.close()` (on `<#id>` or the enclosing `<dialog>`), or `el.focus()` on `<#id>`. Multiple chains on one element are separated by `;` (`vx-on="keydown window | key k | filter ctrlKey || metaKey | prevent | showModal #palette; keydown window | key / | filter !typing | prevent | focus #tree-filter"`).
 
 > **Note on 1.0 draft modifier names:** The earlier draft listed standalone modifier attributes (`vx-debounce`, `vx-throttle`, `vx-delay`, `vx-once`, `vx-prevent`, `vx-stop`, `vx-window`, `vx-document`, `vx-outside`, `vx-trigger-load`, `vx-trigger-visible`, `vx-poll`, and `vx-signal-set:*`). All of those are unified into `vx-on` chains; the optional `vx-compat` shim translates legacy standalone attributes into `vx-on`.
 
@@ -180,14 +180,14 @@ Because `eval` and `new Function` break `script-src 'self'`, while forcing every
 | `vx:before-apply` | Document parsed, before patching | patches, directive |
 | `vx:after-apply` | All patches applied and bound | patches, ignored |
 | `vx:signals-changed` | After a signal patch or a binding write | changed keys |
-| `vx:error` | Transport, parse or protocol failure | reason, response, doc link |
+| `vx:error` | Transport, parse, expression, or patch-apply failure | `{ reason, url, target, error, doc }` (plus `fallback: 'replace' \| 'navigate' \| 'none'` on `reason: 'apply'`) |
 | `vx:sse-state` | Stream connected, dropped, reconnecting | state, attempt |
 
 Islands use `vx:before-apply` / `vx:after-apply` to suspend and resume; nothing else in the framework depends on these events, so an application may ignore them entirely.
 
 ## Error reporting
 
-A detectable mistake — an unknown signal name in a binding, a target that is not an id, a trigger on a non-degradable element, an unknown swap mode — is reported through `vx:error` and logged with a link to the section of this specification that explains it. Silence is a bug; a stack trace is a missed teaching opportunity.
+A detectable mistake — an unknown signal name in a binding, a target that is not an id, a trigger on a non-degradable element, an unknown swap mode, or a DOM morph error — is reported through `vx:error` with `{ reason, url, target, error, doc }`. When a morph throws while applying a `<vx-patch>`, the agent retries that patch as a plain child replacement (`fallback: 'replace'`) and continues applying the remaining patches and `<vx-directive>` (`push-url`, `title`, `announce`, `focus`, `scroll`) so the user never sees a dead click. Silence is a bug; a stack trace is a missed teaching opportunity.
 
 ## Accessibility obligations of the agent
 

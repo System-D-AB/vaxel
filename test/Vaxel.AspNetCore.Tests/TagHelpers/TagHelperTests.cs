@@ -506,6 +506,26 @@ public sealed class TagHelperTests : IClassFixture<ComposerApiFactory>
         Assert.Equal("query != dataset.match", output.Attributes["vx-attr:disabled"].Value);
     }
 
+    [Fact]
+    public void VxOn_AllowsModifierKeysAndTypingGuard_WithRegisteredSignalSchema()
+    {
+        var options = new VaxelOptions
+        {
+            SignalSchema = new SignalSchema<SampleTriggerSignals>(),
+        };
+        var helper = new VxOnTagHelper(Microsoft.Extensions.Options.Options.Create(options))
+        {
+            VxOn = "keydown window | key k | filter ctrlKey || metaKey | prevent | showModal #palette; keydown window | key / | filter !typing && !altKey && !shiftKey | prevent | focus #tree-filter"
+        };
+
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("body", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        helper.Process(ctx, output);
+        Assert.Contains("filter ctrlKey || metaKey", output.Attributes["vx-on"].Value.ToString());
+        Assert.Contains("filter !typing && !altKey && !shiftKey", output.Attributes["vx-on"].Value.ToString());
+    }
+
     private static TagHelperOutput RenderAntiforgeryMeta(VaxelOptions options)
     {
         var antiforgery = new StubAntiforgery();

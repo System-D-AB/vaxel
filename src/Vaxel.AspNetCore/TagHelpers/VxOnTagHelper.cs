@@ -558,18 +558,38 @@ public sealed partial class VxOnTagHelper : TagHelper
 
     private sealed class EventContextSignalSchema(ISignalSchema? inner) : ISignalSchema
     {
-        private static readonly HashSet<string> DefaultEventSignals = ["key", "value", "checked"];
+        private static readonly HashSet<string> DefaultEventSignals =
+        [
+            "key",
+            "value",
+            "checked",
+            "ctrlKey",
+            "metaKey",
+            "altKey",
+            "shiftKey",
+            "typing",
+        ];
 
         public string TypeName => inner?.TypeName ?? "EventContext";
 
         public IReadOnlySet<string> AllowedSignals =>
             inner is null
                 ? DefaultEventSignals
-                : new HashSet<string>(inner.AllowedSignals, StringComparer.Ordinal) { "key", "value", "checked" };
+                : new HashSet<string>(inner.AllowedSignals, StringComparer.Ordinal)
+                {
+                    "key",
+                    "value",
+                    "checked",
+                    "ctrlKey",
+                    "metaKey",
+                    "altKey",
+                    "shiftKey",
+                    "typing",
+                };
 
         public bool IsAllowed(string name)
         {
-            if (name is "key" or "value" or "checked")
+            if (DefaultEventSignals.Contains(name))
             {
                 return true;
             }
@@ -581,7 +601,7 @@ public sealed partial class VxOnTagHelper : TagHelper
         {
             "key" => ExprValueType.String,
             "value" => ExprValueType.String,
-            "checked" => ExprValueType.Bool,
+            "checked" or "ctrlKey" or "metaKey" or "altKey" or "shiftKey" or "typing" => ExprValueType.Bool,
             _ => inner?.GetSignalType(name) ?? ExprValueType.Any,
         };
     }

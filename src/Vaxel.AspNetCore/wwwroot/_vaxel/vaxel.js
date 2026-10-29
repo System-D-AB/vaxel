@@ -796,6 +796,62 @@
     };
   }
 
+  function idOf(el) {
+    if (!el || typeof el.getAttribute !== 'function') return '';
+    return el.getAttribute('id') || '';
+  }
+
+  function tagOf(el) {
+    if (!el) return '';
+    if (typeof el.tagName === 'string') return el.tagName.toUpperCase();
+    if (typeof Element !== 'undefined' && Element.prototype) {
+      var desc = Object.getOwnPropertyDescriptor(Element.prototype, 'tagName');
+      if (desc && typeof desc.get === 'function') {
+        try { return String(desc.get.call(el) || '').toUpperCase(); } catch (_) {}
+      }
+    }
+    return typeof el.nodeName === 'string' ? el.nodeName.toUpperCase() : '';
+  }
+
+  function attrsOf(el) {
+    if (!el) return [];
+    var a = el.attributes;
+    if (a && typeof a.length === 'number' && !(typeof HTMLElement !== 'undefined' && a instanceof HTMLElement)) {
+      return a;
+    }
+    if (typeof Element !== 'undefined' && Element.prototype) {
+      var desc = Object.getOwnPropertyDescriptor(Element.prototype, 'attributes');
+      if (desc && typeof desc.get === 'function') {
+        try { return desc.get.call(el) || []; } catch (_) {}
+      }
+    }
+    return [];
+  }
+
+  function findDirectChildById(parentEl, targetId) {
+    if (!parentEl || !targetId) return null;
+    var c = parentEl.firstElementChild;
+    while (c) {
+      if (idOf(c) === targetId) return c;
+      c = c.nextElementSibling;
+    }
+    return null;
+  }
+
+  function describeTarget(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return null;
+    var id = idOf(el);
+    if (id) return '#' + id;
+    var t = tagOf(el);
+    return t ? t.toLowerCase() : null;
+  }
+
+  function currentUrl() {
+    return typeof window !== 'undefined' && window.location && window.location.href
+      ? window.location.href
+      : '';
+  }
+
   function getElementDataset(el) {
     var ds = {};
     if (!el) return ds;
@@ -805,9 +861,10 @@
         ds[keys[i]] = el.dataset[keys[i]];
       }
     }
-    if (el.attributes) {
-      for (var j = 0; j < el.attributes.length; j++) {
-        var a = el.attributes[j];
+    var elAttrs = attrsOf(el);
+    if (elAttrs && elAttrs.length) {
+      for (var j = 0; j < elAttrs.length; j++) {
+        var a = elAttrs[j];
         if (a.name.indexOf('data-') === 0 && a.name.length > 5) {
           var camel = a.name.slice(5).replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); });
           if (!Object.prototype.hasOwnProperty.call(ds, camel)) {
@@ -965,7 +1022,8 @@
     // Binding elements: text, show, class, attr, style, bind
     var all = [root].concat(Array.from(root.querySelectorAll('*')));
     all.forEach(function (el) {
-      if (!el.attributes) return;
+      var elAttrs = attrsOf(el);
+      if (!elAttrs || !elAttrs.length) return;
       disposeElementEffects(el);
       var ownedProps = new Set();
 
@@ -987,13 +1045,22 @@
         }
         var res = evaluateBareTracked(exprStr, { dataset: getElementDataset(el) });
         if (!res.ok) {
-          emitEvent('vx:error', { attribute: attrName, expression: exprStr, refusal: res.refusal });
+          emitEvent('vx:error', {
+            reason: 'expression',
+            target: describeTarget(el),
+            url: currentUrl(),
+            error: res.refusal ? res.refusal.message : 'Expression evaluation failed',
+            doc: (res.refusal && res.refusal.doc) || 'docs/05#grammar',
+            attribute: attrName,
+            expression: exprStr,
+            refusal: res.refusal
+          });
         }
         return res;
       }
 
-      for (var i = 0; i < el.attributes.length; i++) {
-        var attr = el.attributes[i];
+      for (var i = 0; i < elAttrs.length; i++) {
+        var attr = elAttrs[i];
         var name = attr.name;
         var val = attr.value.trim();
 
@@ -1020,7 +1087,16 @@
                 : evaluateBareTracked(exprStr, extraCtx);
               if (!res.ok) {
                 el.textContent = '';
-                emitEvent('vx:error', { attribute: 'vx-text', expression: exprStr, refusal: res.refusal });
+                emitEvent('vx:error', {
+                  reason: 'expression',
+                  target: describeTarget(el),
+                  url: currentUrl(),
+                  error: res.refusal ? res.refusal.message : 'Expression evaluation failed',
+                  doc: (res.refusal && res.refusal.doc) || 'docs/05#grammar',
+                  attribute: 'vx-text',
+                  expression: exprStr,
+                  refusal: res.refusal
+                });
                 return;
               }
               el.textContent = res.value !== undefined && res.value !== null ? String(res.value) : '';
@@ -1054,7 +1130,14 @@
           var lowerTarget = targetAttr.toLowerCase();
           if (lowerTarget === 'href' || lowerTarget === 'src' || lowerTarget === 'action' ||
               lowerTarget === 'formaction' || lowerTarget === 'style' || lowerTarget.indexOf('on') === 0) {
-            emitEvent('vx:error', { attribute: name, reason: 'Binding to forbidden attribute ' + targetAttr + ' refused (Rule R2).' });
+            emitEvent('vx:error', {
+              reason: 'Binding to forbidden attribute ' + targetAttr + ' refused (Rule R2).',
+              target: describeTarget(el),
+              url: currentUrl(),
+              error: 'Binding to forbidden attribute ' + targetAttr + ' refused (Rule R2).',
+              doc: 'docs/04#bindings',
+              attribute: name
+            });
             continue;
           }
           claimProp(targetAttr === 'hidden' ? 'hidden' : 'attr:' + targetAttr, name);
@@ -1172,6 +1255,18 @@
     return parts;
   }
 
+  function isTypingTarget(target) {
+    if (!target || target.nodeType !== Node.ELEMENT_NODE) return false;
+    var tag = tagOf(target);
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (target.isContentEditable) return true;
+    if (typeof target.getAttribute === 'function') {
+      var ce = target.getAttribute('contenteditable');
+      if (ce === '' || (ce && ce.toLowerCase() === 'true')) return true;
+    }
+    return false;
+  }
+
   function makeEventLookup(el, evt) {
     return function (name) {
       if (name === 'key') {
@@ -1188,6 +1283,21 @@
           ? evt.target.checked
           : Boolean(el && el.checked);
         return exprOk(targetChecked);
+      }
+      if (name === 'ctrlKey') {
+        return exprOk(Boolean(evt && evt.ctrlKey));
+      }
+      if (name === 'metaKey') {
+        return exprOk(Boolean(evt && evt.metaKey));
+      }
+      if (name === 'altKey') {
+        return exprOk(Boolean(evt && evt.altKey));
+      }
+      if (name === 'shiftKey') {
+        return exprOk(Boolean(evt && evt.shiftKey));
+      }
+      if (name === 'typing') {
+        return exprOk(isTypingTarget(evt && evt.target));
       }
       if (name === 'dataset') {
         return exprOk(getElementDataset(el));
@@ -1252,7 +1362,16 @@
         sinkFn = function (evt) {
           var res = evaluateBareWithLookup(sinkExpr, makeEventLookup(el, evt));
           if (!res.ok) {
-            emitEvent('vx:error', { attribute: 'vx-on', expression: sinkExpr, refusal: res.refusal });
+            emitEvent('vx:error', {
+              reason: 'expression',
+              target: describeTarget(el),
+              url: currentUrl(),
+              error: res.refusal ? res.refusal.message : 'Expression evaluation failed',
+              doc: (res.refusal && res.refusal.doc) || 'docs/05#grammar',
+              attribute: 'vx-on',
+              expression: sinkExpr,
+              refusal: res.refusal
+            });
             return;
           }
           setSignal(sinkIdent, res.value);
@@ -1391,7 +1510,10 @@
       } else if (opName === 'key') {
         (function (next, expectedKey) {
           pipeline = function (evt) {
-            if (!evt || evt.key !== expectedKey) return;
+            if (!evt || typeof evt.key !== 'string') return;
+            var matched = evt.key === expectedKey ||
+              (expectedKey.length === 1 && evt.key.length === 1 && evt.key.toLowerCase() === expectedKey.toLowerCase());
+            if (!matched) return;
             next(evt);
           };
         })(pipeline, opArg);
@@ -1400,7 +1522,16 @@
           pipeline = function (evt) {
             var res = evaluateBareWithLookup(filterExpr, makeEventLookup(el, evt));
             if (!res.ok) {
-              emitEvent('vx:error', { attribute: 'vx-on', expression: filterExpr, refusal: res.refusal });
+              emitEvent('vx:error', {
+                reason: 'expression',
+                target: describeTarget(el),
+                url: currentUrl(),
+                error: res.refusal ? res.refusal.message : 'Expression evaluation failed',
+                doc: (res.refusal && res.refusal.doc) || 'docs/05#grammar',
+                attribute: 'vx-on',
+                expression: filterExpr,
+                refusal: res.refusal
+              });
               return;
             }
             var truthy = Boolean(res.value && res.value !== '0' && res.value !== 'false');
@@ -1409,7 +1540,14 @@
           };
         })(pipeline, opArg);
       } else {
-        emitEvent('vx:error', { attribute: 'vx-on', reason: 'Unknown operator: ' + opName });
+        emitEvent('vx:error', {
+          reason: 'Unknown operator: ' + opName,
+          target: describeTarget(el),
+          url: currentUrl(),
+          error: 'Unknown operator: ' + opName,
+          doc: 'docs/04#trigger-chains',
+          attribute: 'vx-on'
+        });
       }
     }
 
@@ -1465,7 +1603,7 @@
 
   // --- 3. DOM Morphing Engine ---
   function morphElement(fromEl, toEl) {
-    if (fromEl.nodeType !== toEl.nodeType || fromEl.tagName !== toEl.tagName) {
+    if (fromEl.nodeType !== toEl.nodeType || tagOf(fromEl) !== tagOf(toEl)) {
       disposeSubtree(fromEl);
       fromEl.replaceWith(toEl);
       return;
@@ -1487,14 +1625,14 @@
     var preserveAttrs = (fromEl.getAttribute && fromEl.getAttribute('vx-preserve-attr') || '').split(/\s+/).filter(Boolean);
 
     // Sync attributes
-    var toAttrs = toEl.attributes;
+    var toAttrs = attrsOf(toEl);
     for (var i = 0; i < toAttrs.length; i++) {
       var attr = toAttrs[i];
       if (preserveAttrs.indexOf(attr.name) === -1 && fromEl.getAttribute(attr.name) !== attr.value) {
         fromEl.setAttribute(attr.name, attr.value);
       }
     }
-    var fromAttrs = fromEl.attributes;
+    var fromAttrs = attrsOf(fromEl);
     for (var j = fromAttrs.length - 1; j >= 0; j--) {
       var fAttr = fromAttrs[j];
       if (!toEl.hasAttribute(fAttr.name) && preserveAttrs.indexOf(fAttr.name) === -1) {
@@ -1545,20 +1683,24 @@
           fromChild.textContent = toChild.textContent;
         }
       } else if (fromChild.nodeType === Node.ELEMENT_NODE && toChild.nodeType === Node.ELEMENT_NODE) {
-        if (fromChild.id && toChild.id && fromChild.id === toChild.id) {
+        // Read identity through getAttribute('id'), never the .id property which <input name="id">
+        // shadows on <form> elements (B5).
+        var fromId = idOf(fromChild);
+        var toId = idOf(toChild);
+        if (fromId && toId && fromId === toId) {
           morphElement(fromChild, toChild);
-        } else if (fromChild.tagName === toChild.tagName && !fromChild.id && !toChild.id) {
+        } else if (tagOf(fromChild) === tagOf(toChild) && !fromId && !toId) {
           // Soft match only when NEITHER side is identified. An identified old node must not
           // be repurposed for an idless (or differently-identified) new node — doing so kept a
           // previous screen's subtree alive when morphing to an unrelated view (US-5).
           morphElement(fromChild, toChild);
         } else {
-          // The current old node is not this incoming node. Look ahead for an old node that
-          // carries the incoming id and relocate it; otherwise insert the incoming node here.
-          // Either way the current old node is NOT consumed — leave it for the next incoming
-          // node, so unmatched old nodes fall through to the removal pass below (US-5).
-          var matchInFrom = toChild.id ? fromEl.querySelector('#' + toChild.id) : null;
-          if (matchInFrom && matchInFrom.parentNode === fromEl) {
+          // The current old node is not this incoming node. Look ahead among direct children
+          // for an old node that carries the incoming id and relocate it; otherwise insert the
+          // incoming node here. Either way the current old node is NOT consumed — leave it for
+          // the next incoming node, so unmatched old nodes fall through to the removal pass below (US-5, B5).
+          var matchInFrom = toId ? findDirectChildById(fromEl, toId) : null;
+          if (matchInFrom) {
             fromEl.insertBefore(matchInFrom, fromChild);
             morphElement(matchInFrom, toChild);
           } else {
@@ -1591,11 +1733,16 @@
   // fragment is the target's inner HTML (cookbook #pane patches) — keep the
   // target identity and morph its children.
   function morphIntoTarget(targetEl, fragment) {
+    if (global.Vaxel && typeof global.Vaxel._beforeMorph === 'function') {
+      global.Vaxel._beforeMorph(targetEl, fragment);
+    }
     var incoming = fragment.firstElementChild;
     if (!incoming) {
       return;
     }
-    if (incoming.id && targetEl.id && incoming.id === targetEl.id) {
+    var incomingId = idOf(incoming);
+    var targetId = idOf(targetEl);
+    if (incomingId && targetId && incomingId === targetId) {
       morphElement(targetEl, incoming);
       return;
     }
@@ -1606,7 +1753,17 @@
     morphElement(targetEl, wrapper);
   }
 
-  function applyPatch(targetSelector, fragmentHtml, mode, namespace) {
+  function parsePatchFragment(fragmentHtml, namespace) {
+    var parser = new DOMParser();
+    if (namespace === 'svg') {
+      var svgDoc = parser.parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + (fragmentHtml || '') + '</svg>', 'image/svg+xml');
+      return svgDoc.documentElement;
+    }
+    var doc = parser.parseFromString(fragmentHtml || '', 'text/html');
+    return doc.body;
+  }
+
+  function applyPatch(targetSelector, fragmentHtml, mode, namespace, requestUrl, requestMethod) {
     var targetEl = document.querySelector(targetSelector);
     if (!targetEl) {
       return { success: false, ignored: true, reason: 'Target not found in DOM' };
@@ -1615,83 +1772,144 @@
     mode = (mode || 'morph').toLowerCase();
     namespace = (namespace || 'html').toLowerCase();
 
-    // Parse fragment
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(fragmentHtml || '', 'text/html');
-    var fragment = doc.body;
+    var fragment = parsePatchFragment(fragmentHtml, namespace);
 
-    if (namespace === 'svg') {
-      var svgDoc = parser.parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + fragmentHtml + '</svg>', 'image/svg+xml');
-      fragment = svgDoc.documentElement;
-    }
+    try {
+      switch (mode) {
+        case 'morph':
+          morphIntoTarget(targetEl, fragment);
+          break;
 
-    switch (mode) {
-      case 'morph':
-        morphIntoTarget(targetEl, fragment);
-        break;
+        case 'outer':
+          if (fragment.firstElementChild) {
+            morphElement(targetEl, fragment.firstElementChild);
+          }
+          break;
 
-      case 'outer':
-        if (fragment.firstElementChild) {
-          morphElement(targetEl, fragment.firstElementChild);
-        }
-        break;
+        case 'replace':
+          if (fragment.firstElementChild) {
+            disposeSubtree(targetEl);
+            targetEl.replaceWith(fragment.firstElementChild);
+          }
+          break;
 
-      case 'replace':
-        if (fragment.firstElementChild) {
-          disposeSubtree(targetEl);
-          targetEl.replaceWith(fragment.firstElementChild);
-        }
-        break;
+        case 'inner':
+          var tempWrapper = targetEl.cloneNode(false);
+          while (fragment.firstChild) tempWrapper.appendChild(fragment.firstChild);
+          morphElement(targetEl, tempWrapper);
+          break;
 
-      case 'inner':
-        var tempWrapper = targetEl.cloneNode(false);
-        while (fragment.firstChild) tempWrapper.appendChild(fragment.firstChild);
-        morphElement(targetEl, tempWrapper);
-        break;
-
-      case 'append':
-        while (fragment.firstChild) {
-          targetEl.appendChild(fragment.firstChild);
-        }
-        break;
-
-      case 'prepend':
-        var first = targetEl.firstChild;
-        while (fragment.firstChild) {
-          targetEl.insertBefore(fragment.firstChild, first);
-        }
-        break;
-
-      case 'before':
-        if (targetEl.parentNode) {
+        case 'append':
           while (fragment.firstChild) {
-            targetEl.parentNode.insertBefore(fragment.firstChild, targetEl);
+            targetEl.appendChild(fragment.firstChild);
+          }
+          break;
+
+        case 'prepend':
+          var first = targetEl.firstChild;
+          while (fragment.firstChild) {
+            targetEl.insertBefore(fragment.firstChild, first);
+          }
+          break;
+
+        case 'before':
+          if (targetEl.parentNode) {
+            while (fragment.firstChild) {
+              targetEl.parentNode.insertBefore(fragment.firstChild, targetEl);
+            }
+          }
+          break;
+
+        case 'after':
+          if (targetEl.parentNode) {
+            var next = targetEl.nextSibling;
+            while (fragment.firstChild) {
+              targetEl.parentNode.insertBefore(fragment.firstChild, next);
+            }
+          }
+          break;
+
+        case 'remove':
+          if (targetEl.parentNode) {
+            disposeSubtree(targetEl);
+            targetEl.parentNode.removeChild(targetEl);
+          }
+          break;
+
+        default:
+          return { success: false, error: 'Unknown swap mode: ' + mode };
+      }
+
+      bindTree(document.body);
+      return { success: true };
+    } catch (err) {
+      // S5: Per-patch recovery. Re-parse the fragment (since morphIntoTarget may have moved
+      // its children before throwing), replace targetEl's children directly, re-bind, and emit
+      // vx:error so remaining patches and <vx-directive> still apply.
+      var effectiveUrl = requestUrl || currentUrl();
+      try {
+        var fallbackFrag = parsePatchFragment(fragmentHtml, namespace);
+        var incomingEl = fallbackFrag.firstElementChild;
+        var incomingId = idOf(incomingEl);
+        var targetId = idOf(targetEl);
+        disposeSubtree(targetEl);
+        var newChildren = [];
+        if (incomingId && targetId && incomingId === targetId && fallbackFrag.childElementCount === 1) {
+          while (incomingEl.firstChild) {
+            newChildren.push(incomingEl.removeChild(incomingEl.firstChild));
+          }
+        } else {
+          while (fallbackFrag.firstChild) {
+            newChildren.push(fallbackFrag.removeChild(fallbackFrag.firstChild));
           }
         }
-        break;
-
-      case 'after':
-        if (targetEl.parentNode) {
-          var next = targetEl.nextSibling;
-          while (fragment.firstChild) {
-            targetEl.parentNode.insertBefore(fragment.firstChild, next);
+        if (typeof targetEl.replaceChildren === 'function') {
+          targetEl.replaceChildren.apply(targetEl, newChildren);
+        } else {
+          while (targetEl.firstChild) targetEl.removeChild(targetEl.firstChild);
+          for (var ci = 0; ci < newChildren.length; ci++) targetEl.appendChild(newChildren[ci]);
+        }
+        bindTree(document.body);
+        emitEvent('vx:error', {
+          reason: 'apply',
+          target: targetSelector,
+          url: effectiveUrl,
+          error: err,
+          fallback: 'replace',
+          doc: 'docs/02#morph'
+        });
+        return { success: true, fallback: 'replace' };
+      } catch (_) {
+        var isGet = !requestMethod || String(requestMethod).toUpperCase() === 'GET';
+        if (isGet && requestUrl) {
+          emitEvent('vx:error', {
+            reason: 'apply',
+            target: targetSelector,
+            url: effectiveUrl,
+            error: err,
+            fallback: 'navigate',
+            doc: 'docs/02#morph'
+          });
+          if (typeof window !== 'undefined' && window.location) {
+            if (typeof window.location.assign === 'function') {
+              window.location.assign(requestUrl);
+            } else {
+              window.location.href = requestUrl;
+            }
           }
+          return { success: false, fallback: 'navigate', error: err };
         }
-        break;
-
-      case 'remove':
-        if (targetEl.parentNode) {
-          disposeSubtree(targetEl);
-          targetEl.parentNode.removeChild(targetEl);
-        }
-        break;
-
-      default:
-        return { success: false, error: 'Unknown swap mode: ' + mode };
+        emitEvent('vx:error', {
+          reason: 'apply',
+          target: targetSelector,
+          url: effectiveUrl,
+          error: err,
+          fallback: 'none',
+          doc: 'docs/02#morph'
+        });
+        return { success: false, fallback: 'none', error: err };
+      }
     }
-
-    bindTree(document.body);
-    return { success: true };
   }
 
   // --- 4. Live Region & A11y ---
@@ -1754,7 +1972,7 @@
   // Extract <vx-patch> from the raw document. Do not HTML-parse the wrapper:
   // a <section>/<div> inside an unknown element can be emptied by DOMParser,
   // which looks like "clicks do nothing".
-  function processPatchDocument(htmlText, userInitiated, triggerEl) {
+  function processPatchDocument(htmlText, userInitiated, triggerEl, requestUrl, requestMethod) {
     emitEvent('vx:before-apply', { html: htmlText });
 
     var appliedCount = 0;
@@ -1766,7 +1984,9 @@
         patchAttrs.target,
         patchMatch[2],
         patchAttrs.mode || 'morph',
-        patchAttrs.namespace || 'html'
+        patchAttrs.namespace || 'html',
+        requestUrl,
+        requestMethod
       );
       if (res && res.success) appliedCount++;
     }
@@ -1796,7 +2016,13 @@
             window.location.href = dest.href;
             return;
           } else {
-            emitEvent('vx:error', { reason: 'Cross-origin redirect rejected', url: redirect });
+            emitEvent('vx:error', {
+              reason: 'Cross-origin redirect rejected',
+              url: redirect,
+              target: null,
+              error: 'Cross-origin redirect rejected',
+              doc: 'docs/02#directives'
+            });
           }
         } catch (_) {}
       }
@@ -1899,7 +2125,7 @@
     });
 
     if (evt && typeof evt.preventDefault === 'function' &&
-        (evt.type === 'submit' || (evt.type === 'click' && (requestEl.tagName === 'A' || requestEl.tagName === 'BUTTON')))) {
+        (evt.type === 'submit' || (evt.type === 'click' && (tagOf(requestEl) === 'A' || tagOf(requestEl) === 'BUTTON')))) {
       evt.preventDefault();
     }
 
@@ -2015,8 +2241,9 @@
         if (el.name && (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) {
           vals.set(el.name, el.type === 'checkbox' ? String(el.checked) : el.value);
         }
-        for (var i = 0; i < el.attributes.length; i++) {
-          var a = el.attributes[i];
+        var elAttrs = attrsOf(el);
+        for (var i = 0; i < elAttrs.length; i++) {
+          var a = elAttrs[i];
           if (a.name.startsWith('vx-vals-')) {
             vals.set(a.name.substring('vx-vals-'.length), a.value);
           }
@@ -2044,8 +2271,9 @@
         if (el.name && (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) {
           getUrl.searchParams.set(el.name, el.type === 'checkbox' ? String(el.checked) : el.value);
         }
-        for (var gi = 0; gi < el.attributes.length; gi++) {
-          var ga = el.attributes[gi];
+        var getElAttrs = attrsOf(el);
+        for (var gi = 0; gi < getElAttrs.length; gi++) {
+          var ga = getElAttrs[gi];
           if (ga.name.indexOf('vx-vals-') === 0) {
             getUrl.searchParams.set(ga.name.substring('vx-vals-'.length), ga.value);
           }
@@ -2087,7 +2315,7 @@
       if (contentType.indexOf('text/vnd.vaxel-patch+html') !== -1) {
         return res.text().then(function (html) {
           if (abortCtrl.signal.aborted || !document.body.contains(el)) return;
-          processPatchDocument(html, true, el);
+          processPatchDocument(html, true, el, url, method);
         });
       }
       window.location.href = url;
@@ -2095,7 +2323,13 @@
       inFlightRequests.delete(el);
       clearIndicators();
       if (err.name !== 'AbortError') {
-        emitEvent('vx:error', { error: err });
+        emitEvent('vx:error', {
+          reason: 'network',
+          url: url,
+          target: target || describeTarget(el),
+          error: err,
+          doc: 'docs/02#requests'
+        });
       }
     });
   }
@@ -2147,7 +2381,7 @@
       }).then(function (res) {
         return res.text();
       }).then(function (html) {
-        processPatchDocument(html, false, null);
+        processPatchDocument(html, false, null, window.location.href, 'GET');
       }).catch(function () {
         window.location.reload();
       });
@@ -2188,7 +2422,7 @@
       };
       sseSource.addEventListener('vx-patch', function (e) {
         if (e.data) {
-          processPatchDocument(e.data, false, null);
+          processPatchDocument(e.data, false, null, sseUrl, 'SSE');
         }
       });
       sseSource.addEventListener('vx-reload', function () {
@@ -2203,10 +2437,20 @@
   }
 
   function emitEvent(name, detail, cancelable) {
+    var payload = detail || {};
+    if (name === 'vx:error') {
+      payload = Object.assign({
+        reason: payload.reason || 'error',
+        url: payload.url !== undefined ? payload.url : currentUrl(),
+        target: payload.target !== undefined ? payload.target : null,
+        error: payload.error !== undefined ? payload.error : (payload.reason || null),
+        doc: payload.doc || (payload.refusal && payload.refusal.doc) || 'docs/04#events'
+      }, payload);
+    }
     var evt = new CustomEvent(name, {
       bubbles: true,
       cancelable: Boolean(cancelable),
-      detail: detail || {}
+      detail: payload
     });
     return document.dispatchEvent(evt);
   }
