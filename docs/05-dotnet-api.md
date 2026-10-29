@@ -128,11 +128,12 @@ Razor never types a raw `vx-` attribute:
 
 <section id="pane" vx-region>…</section>
 
-<span vx-text="draftSeq">@Model.DraftSeq</span>
-<button vx-attr:disabled="saving">Save</button>
+<span vx-text="Showing @{ count } rows">@Model.Count</span>
+<button vx-attr:disabled="name == '' || saving">Save</button>
+<div vx-show="tabs.length > 1">…</div>
 ```
 
-Tag Helpers validate at compile/render time what the agent cannot: that a target is an `#id`, that a bound name is a declared signal (when a signal schema is registered), that a trigger sits on a degradable element. They are also the seam that lets the agent be replaced — or the same protocol be driven by htmx plus a morph extension — without touching a view.
+Tag Helpers validate at compile/render time what the agent cannot: that a target is an `#id`, that a trigger sits on a degradable element, and that every expression in `vx-show`, `vx-text`, `vx-class:*`, and `vx-attr:*` parses within the length (≤ 512) and depth (≤ 32) caps, calls only whitelisted functions, and never binds `href`, `src`, `action`, `formaction`, `style`, or `on*`. They are also the seam that lets the agent be replaced — or the same protocol be driven by htmx plus a morph extension — without touching a view.
 
 ### Attribute coverage
 
@@ -153,11 +154,15 @@ A Tag Helper claims every `vx-*` attribute the 1.0 agent implements:
 
 **What a view still writes raw.** `vx-sync`, `vx-encoding`, `vx-style:*`, `vx-url-sync`, `vx-preserve-attr` and `vx-overwrite-dirty` are implemented by the agent but have no dedicated Tag Helper yet; write them as plain attributes. Everything marked ⬜ *not in 1.0* in [04](04-client-attributes.md) — the trigger modifiers, `vx-on`, `vx-match-media`, `vx-signal-set`, `vx-transition-name`, `vx-ignore`, the `vx-bind-*` modifiers — is inert in the 1.0 bundle and has no Tag Helper; it arrives with `v1.1-triggers`.
 
-An optional **signal schema** registers names and types so bindings can be checked and a strongly-typed record generated for `[FromSignals]`:
+An optional **signal schema** registers names and types so bindings and expressions are type-checked at render time (and a strongly-typed record can be bound via `[FromSignals]`):
 
 ```csharp
 builder.Services.AddVaxel().AddSignalSchema<ShellSignals>();
 ```
+
+- **With `AddSignalSchema<T>()` registered:** `VxBindTagHelper` validates syntax, the 20-function whitelist, length/depth caps, signal existence, and static operand/return types (`number | string | bool | list | object | null | any`), throwing `VaxelTagHelperException` with the offending character span on any mismatch (e.g., `vx-show="tabs > 1"` where `Tabs` is a list, or a reference to an undeclared signal).
+- **Without a signal schema registered:** `VxBindTagHelper` still validates syntax, the function whitelist, forbidden attributes, and the length/depth caps (treating signal types as `any`) — degrading gracefully to less than full schema typing while still catching syntax and whitelist mistakes before deploy.
+- **No server evaluation:** the server parses and type-checks only; expression values are computed in exactly one place, the client agent.
 
 ## Pushing from the server
 

@@ -9,5 +9,7 @@ public sealed record WorkbenchSignals(
     int DraftSeq = 1,
     string Filter = "",
     int Count = 0,
-    string Since = ""
+    string Since = "",
+    string ContactName = "",
+    string ContactMessage = ""
 );

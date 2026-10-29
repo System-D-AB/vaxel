@@ -1,0 +1,13 @@
+{
+  "name": "vaxel-conformance-expressions",
+  "private": true,
+  "version": "2.0.0",
+  "description": "jsdom conformance runner for the v2.0 expression engine and 305+ golden corpus.",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

@@ -19,7 +19,7 @@ public sealed class AgentBundleTests
     }
 
     [Fact]
-    public void Bundle_Exists_AndUnder12kGzip()
+    public void Bundle_Exists_AndUnder20kGzip()
     {
         var path = GetBundlePath();
         Assert.True(File.Exists(path), "vaxel.js bundle file must exist.");
@@ -35,8 +35,8 @@ public sealed class AgentBundleTests
 
         var gzipSize = memoryStream.ToArray().Length;
 
-        // Size budget constraint: Total bundle ≤ 12 KB (12,288 bytes) gzip
-        const int MaxGzipBudget = 12 * 1024;
+        // Size budget constraint: v2.0 total bundle ≤ 20 KB (20,480 bytes) gzip
+        const int MaxGzipBudget = 20 * 1024;
         Assert.True(gzipSize <= MaxGzipBudget, $"vaxel.js gzip size ({gzipSize} bytes) exceeded budget ({MaxGzipBudget} bytes).");
     }
 

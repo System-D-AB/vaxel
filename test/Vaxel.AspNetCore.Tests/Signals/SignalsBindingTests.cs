@@ -209,4 +209,22 @@ public sealed class SignalsBindingTests : IClassFixture<ComposerApiFactory>
         Assert.Contains("public", cacheControl);
         Assert.Contains("max-age=3600", cacheControl);
     }
+
+    [Fact]
+    public async Task RoundTrip_NullDeletedKey_BindsDefaultAs1x()
+    {
+        // US-4: When a signal is set to null on the client, delete-on-null removes the key
+        // from the VX-Signals bag, so [FromSignals] binds the model's default for that property
+        // while keeping active signals intact.
+        var request = new HttpRequestMessage(HttpMethod.Get, "/signals/controller");
+        request.Headers.Add("VX-Signals", "{\"railOpen\":false}");
+
+        var response = await _client.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var doc = JsonDocument.Parse(content);
+        Assert.Equal("overview", doc.RootElement.GetProperty("tab").GetString());
+        Assert.False(doc.RootElement.GetProperty("railOpen").GetBoolean());
+    }
 }

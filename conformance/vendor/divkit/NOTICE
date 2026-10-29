@@ -1,0 +1,10 @@
+Vaxel Conformance Suite — DivKit Expression Fixtures
+Copyright (c) Vaxel contributors.
+
+This directory and conformance/expressions/cases/divkit_*.json include test cases
+derived from DivKit (https://github.com/divkit/divkit) via Centralen:
+DivKit upstream commit: f8796582dc9f426f16d4b378459f0864316a5c71
+Centralen source commit: 8d58b3637b93d36f81cd90186ddeb07ee831f21d
+Copyright 2022 YANDEX LLC, licensed under the Apache License, Version 2.0.
+See LICENSE in this directory. Modifications are listed in CHANGES.md.
+No endorsement by Yandex is implied.

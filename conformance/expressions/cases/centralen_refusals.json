@@ -1,0 +1,22 @@
+[
+  { "name": "cen_err_syntax_mismatched_brackets", "expression": "@{user[0}", "state": {}, "expect": { "ok": false, "code": "expressions.syntax" } },
+  { "name": "cen_err_syntax_invalid_identifier", "expression": "@{123abc}", "state": {}, "expect": { "ok": false, "code": "expressions.syntax" } },
+  { "name": "cen_err_syntax_unclosed_template", "expression": "Hello @{name", "state": { "name": "Bob" }, "expect": { "ok": false, "code": "expressions.syntax" } },
+  { "name": "cen_err_syntax_empty_braces", "expression": "Hello @{} world", "state": {}, "expect": { "ok": false, "code": "expressions.syntax" } },
+  { "name": "cen_err_syntax_consecutive_dots", "expression": "@{user..name}", "state": { "user": { "name": "Bob" } }, "expect": { "ok": false, "code": "expressions.syntax" } },
+  { "name": "cen_err_div_zero_direct", "expression": "@{100 / 0}", "state": {}, "expect": { "ok": false, "code": "expressions.division_by_zero" } },
+  { "name": "cen_err_div_zero_variable", "expression": "@{total / count}", "state": { "total": 100, "count": 0 }, "expect": { "ok": false, "code": "expressions.division_by_zero" } },
+  { "name": "cen_err_mod_zero_variable", "expression": "@{total % count}", "state": { "total": 100, "count": 0 }, "expect": { "ok": false, "code": "expressions.division_by_zero" } },
+  { "name": "cen_err_type_add_bool_to_number", "expression": "@{42 + true}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_type_sub_bool_from_number", "expression": "@{42 - false}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_type_unary_neg_string", "expression": "@{-'hello'}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_type_unary_neg_bool", "expression": "@{-true}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_type_gt_string_number", "expression": "@{'10' > 5}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_type_lt_bool_bool", "expression": "@{true < false}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_fn_unknown_name", "expression": "@{customFunction(1, 2, 3)}", "state": {}, "expect": { "ok": false, "code": "expressions.unknown_function" } },
+  { "name": "cen_err_fn_unknown_in_interp", "expression": "Result: @{evaluateSecret(password)}", "state": { "password": "pass" }, "expect": { "ok": false, "code": "expressions.unknown_function" } },
+  { "name": "cen_err_fn_toInteger_invalid_string", "expression": "@{toInteger('not_a_number')}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_fn_toNumber_invalid_string", "expression": "@{toNumber('not_a_float')}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_fn_encodeUri_non_string", "expression": "@{encodeUri(12345)}", "state": {}, "expect": { "ok": false, "code": "expressions.type" } },
+  { "name": "cen_err_syntax_invalid_escape", "expression": "@{'invalid \\x escape'}", "state": {}, "expect": { "ok": false, "code": "expressions.syntax" } }
+]

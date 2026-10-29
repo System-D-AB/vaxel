@@ -21,6 +21,8 @@ public sealed class SignalStoreTests
         Assert.Contains("onlyIfMissing", code);
         Assert.Contains("subscribers", code);
         Assert.Contains("notify", code);
+        Assert.Contains("EffectScope", code);
+        Assert.Contains("peek", code);
     }
 
     [Fact]

@@ -10,8 +10,8 @@ Everything in this specification is derivable from these. If a proposed feature 
 **R1 — The server renders everything.**
 No client-side templates, no client render tree. HTML is produced by Razor: Pages, Views, Partials, ViewComponents, Tag Helpers, or statically-rendered Razor Components. The client's only DOM authorship is applying what the server sent and toggling attributes bound to signals.
 
-**R2 — Attribute values are data, never code.**
-No attribute is ever evaluated. There is no expression language on the client, therefore no `Function()`, therefore no `unsafe-eval`. Where a decision needs computing, the server computes it and sends the result — as a fragment or as a signal value.
+**R2 — Attribute values are data, or pure expressions over signals; never code.**
+No attribute is ever passed to `eval` or `new Function`. Binding attributes (`vx-show`, `vx-attr:*`, `vx-class:*`, `vx-text`) may contain a small, closed expression over signals (arithmetic, comparisons, boolean logic, ternary, dotted member access, and a 20-function pure whitelist) interpreted by a linear-time AST walker on the client and statically validated by a C# parser and schema type-checker at render time. There is no JavaScript evaluation, therefore no `Function()`, therefore no `unsafe-eval`. Domain derivations, formatting, and authority remain on the server.
 
 **R3 — Every fragment target is also reachable as a full page.**
 A patch is an optimisation of a page, never a capability the page lacks. This is what makes deep links, the back button, no-JS operation and screen readers work by construction rather than by discipline, and it is enforced by a test (see [07 — Testing](07-testing.md)).
@@ -37,7 +37,7 @@ Signals **are not**:
 - authority — the server never trusts a signal for a permission, an identity, a price or a total. Signals are user-editable by definition;
 - a render tree — bindings toggle text, attributes, classes and visibility on elements the *server* produced.
 
-**Derivations are computed on the server.** Where Datastar writes `data-show="$count > 3"`, vaxel patches a signal or a fragment because the server already knows the answer. This is the single reduction that removes the expression language, and with it the CSP problem, the parser, the second engine and the parity test suite.
+**Domain derivations are computed on the server; UI display facts may use closed signal expressions.** Single-edge display bindings (`vx-show="tabs.length > 1"`, `vx-attr:disabled="name == '' || saving"`, `vx-text="Showing @{ count } rows"`) run inside a closed, CSP-safe interpreter and are validated against the registered signal schema at render time. Multi-step derivations, locale formatting, and business rules stay on the server.
 
 ## Non-goals
 

@@ -82,4 +82,80 @@ public sealed class SignalSchemaTests
         tagHelper.Process(context, output);
         Assert.Equal("arbitrarySignalName", output.Attributes["vx-text"].Value);
     }
+
+    private sealed record ExtendedShellSignals(
+        string Tab,
+        bool RailOpen,
+        int Count,
+        IReadOnlyList<string> Tabs);
+
+    [Fact]
+    public void Schema_ExpressionTypeMismatch_ListComparedToNumber_Fails()
+    {
+        var options = new VaxelOptions { SignalSchema = new SignalSchema<ExtendedShellSignals>() };
+        var tagHelper = new VxBindTagHelper(Options.Create(options))
+        {
+            VxShow = "tabs > 1"
+        };
+
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("div", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        var ex = Assert.Throws<VaxelTagHelperException>(() => tagHelper.Process(context, output));
+        Assert.Contains("expressions.type", ex.Message);
+    }
+
+    [Fact]
+    public void Schema_ExpressionListLength_Succeeds()
+    {
+        var options = new VaxelOptions { SignalSchema = new SignalSchema<ExtendedShellSignals>() };
+        var tagHelper = new VxBindTagHelper(Options.Create(options))
+        {
+            VxShow = "tabs.length > 1 && railOpen"
+        };
+
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("div", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        tagHelper.Process(context, output);
+        Assert.Equal("tabs.length > 1 && railOpen", output.Attributes["vx-show"].Value);
+    }
+
+    [Fact]
+    public void Schema_NonBooleanShowBinding_Fails()
+    {
+        var options = new VaxelOptions { SignalSchema = new SignalSchema<ExtendedShellSignals>() };
+        var tagHelper = new VxBindTagHelper(Options.Create(options))
+        {
+            VxShow = "count"
+        };
+
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("div", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        var ex = Assert.Throws<VaxelTagHelperException>(() => tagHelper.Process(context, output));
+        Assert.Contains("expressions.type", ex.Message);
+    }
+
+    [Fact]
+    public void Schema_TemplateInterpolation_ValidatesReferencedSignals()
+    {
+        var options = new VaxelOptions { SignalSchema = new SignalSchema<ExtendedShellSignals>() };
+        var validHelper = new VxBindTagHelper(Options.Create(options))
+        {
+            VxText = "Showing @{ count } rows"
+        };
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("span", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        validHelper.Process(context, output);
+        Assert.Equal("Showing @{ count } rows", output.Attributes["vx-text"].Value);
+
+        var invalidHelper = new VxBindTagHelper(Options.Create(options))
+        {
+            VxText = "Showing @{ missingSignal } rows"
+        };
+        var ex = Assert.Throws<VaxelTagHelperException>(() => invalidHelper.Process(context, output));
+        Assert.Contains("expressions.unknown_field", ex.Message);
+    }
 }

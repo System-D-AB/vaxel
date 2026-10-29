@@ -1,0 +1,22 @@
+[
+  { "name": "cen_interp_welcome_message", "expression": "Welcome, @{user.name}! Your role is @{user.role}.", "state": { "user": { "name": "Alice", "role": "Admin" } }, "expect": { "ok": true, "value": "Welcome, Alice! Your role is Admin." } },
+  { "name": "cen_interp_order_summary", "expression": "Order #@{order_id}: @{quantity} x @{item} = $@{(quantity * unit_price)}", "state": { "order_id": 1042, "quantity": 3, "item": "Book", "unit_price": 15 }, "expect": { "ok": true, "value": "Order #1042: 3 x Book = $45" } },
+  { "name": "cen_interp_address_line", "expression": "@{street}, @{city} @{zip}", "state": { "street": "Main St 1", "city": "Stockholm", "zip": "11122" }, "expect": { "ok": true, "value": "Main St 1, Stockholm 11122" } },
+  { "name": "cen_interp_with_fn_call", "expression": "User ID: @{toUpperCase(username)}", "state": { "username": "admin_user" }, "expect": { "ok": true, "value": "User ID: ADMIN_USER" } },
+  { "name": "cen_interp_with_len", "expression": "Password length: @{len(password)} characters", "state": { "password": "supersecret" }, "expect": { "ok": true, "value": "Password length: 11 characters" } },
+  { "name": "cen_interp_currency_formatting", "expression": "Price: $@{(round(amount * 100) / 100)}", "state": { "amount": 49.999 }, "expect": { "ok": true, "value": "Price: $50" } },
+  { "name": "cen_interp_conditional_plural", "expression": "@{count} @{count == 1 ? 'result' : 'results'} found", "state": { "count": 1 }, "expect": { "ok": true, "value": "1 result found" } },
+  { "name": "cen_interp_conditional_plural_many", "expression": "@{count} @{count == 1 ? 'result' : 'results'} found", "state": { "count": 42 }, "expect": { "ok": true, "value": "42 results found" } },
+  { "name": "cen_interp_status_badge", "expression": "Status: [@{is_active ? 'ACTIVE' : 'INACTIVE'}]", "state": { "is_active": true }, "expect": { "ok": true, "value": "Status: [ACTIVE]" } },
+  { "name": "cen_interp_status_badge_inactive", "expression": "Status: [@{is_active ? 'ACTIVE' : 'INACTIVE'}]", "state": { "is_active": false }, "expect": { "ok": true, "value": "Status: [INACTIVE]" } },
+  { "name": "cen_interp_plain_string_no_at", "expression": "Plain text with no templates at all.", "state": {}, "expect": { "ok": true, "value": "Plain text with no templates at all." } },
+  { "name": "cen_interp_email_with_escaped_at", "expression": "Contact support\\@{domain} for help.", "state": { "domain": "example.com" }, "expect": { "ok": true, "value": "Contact support@{domain} for help." } },
+  { "name": "cen_interp_multiple_adjacent_exprs", "expression": "@{a}@{b}@{c}", "state": { "a": "X", "b": "Y", "c": "Z" }, "expect": { "ok": true, "value": "XYZ" } },
+  { "name": "cen_interp_leading_and_trailing_exprs", "expression": "@{greeting}, world@{punctuation}", "state": { "greeting": "Hello", "punctuation": "!" }, "expect": { "ok": true, "value": "Hello, world!" } },
+  { "name": "cen_interp_complex_math", "expression": "Result: @{(a + b) * (c - d)}", "state": { "a": 5, "b": 3, "c": 10, "d": 6 }, "expect": { "ok": true, "value": "Result: 32" } },
+  { "name": "cen_interp_boolean_value", "expression": "Flag is @{flag}", "state": { "flag": true }, "expect": { "ok": true, "value": "Flag is true" } },
+  { "name": "cen_interp_null_value", "expression": "Value: [@{val}]", "state": { "val": null }, "expect": { "ok": true, "value": "Value: []" } },
+  { "name": "cen_interp_multiline_template", "expression": "Line 1: @{val1}\nLine 2: @{val2}", "state": { "val1": "First", "val2": "Second" }, "expect": { "ok": true, "value": "Line 1: First\nLine 2: Second" } },
+  { "name": "cen_interp_special_characters_around", "expression": "{\"key\": \"@{val}\", \"num\": @{num}}", "state": { "val": "text", "num": 123 }, "expect": { "ok": true, "value": "{\"key\": \"text\", \"num\": 123}" } },
+  { "name": "cen_interp_nested_state_fields", "expression": "@{profile.personal.name} (@{profile.work.title})", "state": { "profile": { "personal": { "name": "Ada" }, "work": { "title": "Engineer" } } }, "expect": { "ok": true, "value": "Ada (Engineer)" } }
+]

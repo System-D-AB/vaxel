@@ -1,0 +1,13 @@
+{
+  "name": "vaxel-conformance-signals",
+  "private": true,
+  "version": "2.0.0",
+  "description": "jsdom conformance fixtures for the v2.0 auto-tracking signal store.",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

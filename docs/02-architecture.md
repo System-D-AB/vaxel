@@ -95,9 +95,11 @@ What is **not** in there, and never will be: an expression evaluator, a template
 
 ## Signals
 
-The store is a small reactive map: `get`, `set`, `patch`, `subscribe`. Its only DOM job is name-bound updates — `vx-text="draftSeq"`, `vx-show="railOpen"`, `vx-class:is-active="tabIsSubmissions"`, `vx-attr:disabled="saving"`. There is no computation: a binding names a signal, nothing more.
+The store is an auto-tracking reactive engine (`Signal` and `EffectScope`) behind `get`, `set`, `patch`, `subscribe`. Its only DOM job is one-edge-deep updates — `vx-text="draftSeq"`, `vx-show="railOpen"`, `vx-class:is-active="tabIsSubmissions"`, `vx-attr:disabled="saving"`. *Bindings* remain one edge deep (signal → DOM; creating, removing or reordering elements is always a patch), while the *store* tracks which signals an effect read and re-runs only those effects when a dependency changes (`!==`).
 
-Implementation is pluggable. The default is a ~1 KB store; any library exposing `signal`/`computed`/`effect` (for example `@preact/signals-core`) can back it. Computed signals exist for the agent's internal use, not for authoring — an application never declares a derivation on the client, because R2.
+Writes and multi-key `patch` calls enqueue affected effects into a **private scheduling queue** (with a write-depth counter and de-duplicating set) and drain when the outermost write finishes: a multi-key patch runs a reader once against the fully applied bag, diamond paths run once per pass, re-entrant writes settle without recursion, and an effect cycle aborts after 100 passes with a `vx:error`. Patches apply first and bindings re-run after, so a binding silently wins a one-owner conflict.
+
+Implementation is self-contained (~1 KB). Computed/derived signals are never exposed for authoring — an application does not declare multi-edge derivations on the client (R1).
 
 ## Server push
 

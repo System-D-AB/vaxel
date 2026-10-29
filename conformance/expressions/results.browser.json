@@ -1,0 +1,1874 @@
+{
+  "cen_state_simple_number": {
+    "parseOk": true,
+    "canonical": "age",
+    "evalOk": true,
+    "value": 30
+  },
+  "cen_state_simple_string": {
+    "parseOk": true,
+    "canonical": "first_name",
+    "evalOk": true,
+    "value": "Jane"
+  },
+  "cen_state_simple_bool_true": {
+    "parseOk": true,
+    "canonical": "is_active",
+    "evalOk": true,
+    "value": true
+  },
+  "cen_state_simple_bool_false": {
+    "parseOk": true,
+    "canonical": "is_active",
+    "evalOk": true,
+    "value": false
+  },
+  "cen_state_simple_null": {
+    "parseOk": true,
+    "canonical": "middle_name",
+    "evalOk": true,
+    "value": null
+  },
+  "cen_state_nested_two_levels": {
+    "parseOk": true,
+    "canonical": "(. user name)",
+    "evalOk": true,
+    "value": "Bob"
+  },
+  "cen_state_nested_three_levels": {
+    "parseOk": true,
+    "canonical": "(. (. company address) city)",
+    "evalOk": true,
+    "value": "Stockholm"
+  },
+  "cen_state_nested_null_parent": {
+    "parseOk": true,
+    "canonical": "(. (. user address) zip)",
+    "evalOk": true,
+    "value": null
+  },
+  "cen_state_nested_missing_safe": {
+    "parseOk": true,
+    "canonical": "(. user missing_prop)",
+    "evalOk": true,
+    "value": null
+  },
+  "cen_state_in_arithmetic": {
+    "parseOk": true,
+    "canonical": "(+ salary bonus)",
+    "evalOk": true,
+    "value": 55000
+  },
+  "cen_state_in_comparison_gt": {
+    "parseOk": true,
+    "canonical": "(>= income threshold)",
+    "evalOk": true,
+    "value": true
+  },
+  "cen_state_in_comparison_eq": {
+    "parseOk": true,
+    "canonical": "(== status \"approved\")",
+    "evalOk": true,
+    "value": true
+  },
+  "cen_state_in_comparison_eq_false": {
+    "parseOk": true,
+    "canonical": "(== status \"approved\")",
+    "evalOk": true,
+    "value": false
+  },
+  "cen_state_in_logical_and": {
+    "parseOk": true,
+    "canonical": "(&& is_admin has_permission)",
+    "evalOk": true,
+    "value": true
+  },
+  "cen_state_in_logical_or": {
+    "parseOk": true,
+    "canonical": "(|| is_vip (> order_total 100))",
+    "evalOk": true,
+    "value": true
+  },
+  "cen_state_in_ternary_condition": {
+    "parseOk": true,
+    "canonical": "(? has_discount (* price 0.9) price)",
+    "evalOk": true,
+    "value": 90
+  },
+  "cen_state_in_ternary_condition_false": {
+    "parseOk": true,
+    "canonical": "(? has_discount (* price 0.9) price)",
+    "evalOk": true,
+    "value": 100
+  },
+  "cen_state_field_with_underscore": {
+    "parseOk": true,
+    "canonical": "tax_rate_percent",
+    "evalOk": true,
+    "value": 25
+  },
+  "cen_state_field_with_digits": {
+    "parseOk": true,
+    "canonical": "(+ option1 option2)",
+    "evalOk": true,
+    "value": 30
+  },
+  "cen_state_visibility_rule_example": {
+    "parseOk": true,
+    "canonical": "(&& (== employment_type \"employed\") (>= hours_per_week 20))",
+    "evalOk": true,
+    "value": true
+  },
+  "cen_state_visibility_rule_example_fail": {
+    "parseOk": true,
+    "canonical": "(&& (== employment_type \"employed\") (>= hours_per_week 20))",
+    "evalOk": true,
+    "value": false
+  },
+  "cen_state_computed_field_example": {
+    "parseOk": true,
+    "canonical": "(+ (+ first_name \" \") last_name)",
+    "evalOk": true,
+    "value": "Alan Turing"
+  },
+  "cen_state_validation_rule_example": {
+    "parseOk": true,
+    "canonical": "(&& (>= age 18) (<= age 120))",
+    "evalOk": true,
+    "value": true
+  },
+  "cen_state_validation_rule_example_fail": {
+    "parseOk": true,
+    "canonical": "(&& (>= age 18) (<= age 120))",
+    "evalOk": true,
+    "value": false
+  },
+  "cen_state_null_coalesce_ternary": {
+    "parseOk": true,
+    "canonical": "(? (!= nickname null) nickname first_name)",
+    "evalOk": true,
+    "value": "Grace"
+  },
+  "cen_interp_welcome_message": {
+    "parseOk": true,
+    "canonical": "(tpl \"Welcome, \" (. user name) \"! Your role is \" (. user role) \".\")",
+    "evalOk": true,
+    "value": "Welcome, Alice! Your role is Admin."
+  },
+  "cen_interp_order_summary": {
+    "parseOk": true,
+    "canonical": "(tpl \"Order #\" order_id \": \" quantity \" x \" item \" = $\" (* quantity unit_price))",
+    "evalOk": true,
+    "value": "Order #1042: 3 x Book = $45"
+  },
+  "cen_interp_address_line": {
+    "parseOk": true,
+    "canonical": "(tpl street \", \" city \" \" zip)",
+    "evalOk": true,
+    "value": "Main St 1, Stockholm 11122"
+  },
+  "cen_interp_with_fn_call": {
+    "parseOk": true,
+    "canonical": "(tpl \"User ID: \" (call toUpperCase username))",
+    "evalOk": true,
+    "value": "User ID: ADMIN_USER"
+  },
+  "cen_interp_with_len": {
+    "parseOk": true,
+    "canonical": "(tpl \"Password length: \" (call len password) \" characters\")",
+    "evalOk": true,
+    "value": "Password length: 11 characters"
+  },
+  "cen_interp_currency_formatting": {
+    "parseOk": true,
+    "canonical": "(tpl \"Price: $\" (/ (call round (* amount 100)) 100))",
+    "evalOk": true,
+    "value": "Price: $50"
+  },
+  "cen_interp_conditional_plural": {
+    "parseOk": true,
+    "canonical": "(tpl count \" \" (? (== count 1) \"result\" \"results\") \" found\")",
+    "evalOk": true,
+    "value": "1 result found"
+  },
+  "cen_interp_conditional_plural_many": {
+    "parseOk": true,
+    "canonical": "(tpl count \" \" (? (== count 1) \"result\" \"results\") \" found\")",
+    "evalOk": true,
+    "value": "42 results found"
+  },
+  "cen_interp_status_badge": {
+    "parseOk": true,
+    "canonical": "(tpl \"Status: [\" (? is_active \"ACTIVE\" \"INACTIVE\") \"]\")",
+    "evalOk": true,
+    "value": "Status: [ACTIVE]"
+  },
+  "cen_interp_status_badge_inactive": {
+    "parseOk": true,
+    "canonical": "(tpl \"Status: [\" (? is_active \"ACTIVE\" \"INACTIVE\") \"]\")",
+    "evalOk": true,
+    "value": "Status: [INACTIVE]"
+  },
+  "cen_interp_plain_string_no_at": {
+    "parseOk": true,
+    "canonical": "\"Plain text with no templates at all.\"",
+    "evalOk": true,
+    "value": "Plain text with no templates at all."
+  },
+  "cen_interp_email_with_escaped_at": {
+    "parseOk": true,
+    "canonical": "(tpl \"Contact support@{domain} for help.\")",
+    "evalOk": true,
+    "value": "Contact support@{domain} for help."
+  },
+  "cen_interp_multiple_adjacent_exprs": {
+    "parseOk": true,
+    "canonical": "(tpl a b c)",
+    "evalOk": true,
+    "value": "XYZ"
+  },
+  "cen_interp_leading_and_trailing_exprs": {
+    "parseOk": true,
+    "canonical": "(tpl greeting \", world\" punctuation)",
+    "evalOk": true,
+    "value": "Hello, world!"
+  },
+  "cen_interp_complex_math": {
+    "parseOk": true,
+    "canonical": "(tpl \"Result: \" (* (+ a b) (- c d)))",
+    "evalOk": true,
+    "value": "Result: 32"
+  },
+  "cen_interp_boolean_value": {
+    "parseOk": true,
+    "canonical": "(tpl \"Flag is \" flag)",
+    "evalOk": true,
+    "value": "Flag is true"
+  },
+  "cen_interp_null_value": {
+    "parseOk": true,
+    "canonical": "(tpl \"Value: [\" val \"]\")",
+    "evalOk": true,
+    "value": "Value: []"
+  },
+  "cen_interp_multiline_template": {
+    "parseOk": true,
+    "canonical": "(tpl \"Line 1: \" val1 \"\\nLine 2: \" val2)",
+    "evalOk": true,
+    "value": "Line 1: First\nLine 2: Second"
+  },
+  "cen_interp_special_characters_around": {
+    "parseOk": true,
+    "canonical": "(tpl \"{\\\"key\\\": \\\"\" val \"\\\", \\\"num\\\": \" num \"}\")",
+    "evalOk": true,
+    "value": "{\"key\": \"text\", \"num\": 123}"
+  },
+  "cen_interp_nested_state_fields": {
+    "parseOk": true,
+    "canonical": "(tpl (. (. profile personal) name) \" (\" (. (. profile work) title) \")\")",
+    "evalOk": true,
+    "value": "Ada (Engineer)"
+  },
+  "cen_err_syntax_mismatched_brackets": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "cen_err_syntax_invalid_identifier": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "cen_err_syntax_unclosed_template": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "cen_err_syntax_empty_braces": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "cen_err_syntax_consecutive_dots": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "cen_err_div_zero_direct": {
+    "parseOk": true,
+    "canonical": "(/ 100 0)",
+    "evalOk": false,
+    "code": "expressions.division_by_zero"
+  },
+  "cen_err_div_zero_variable": {
+    "parseOk": true,
+    "canonical": "(/ total count)",
+    "evalOk": false,
+    "code": "expressions.division_by_zero"
+  },
+  "cen_err_mod_zero_variable": {
+    "parseOk": true,
+    "canonical": "(% total count)",
+    "evalOk": false,
+    "code": "expressions.division_by_zero"
+  },
+  "cen_err_type_add_bool_to_number": {
+    "parseOk": true,
+    "canonical": "(+ 42 true)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_type_sub_bool_from_number": {
+    "parseOk": true,
+    "canonical": "(- 42 false)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_type_unary_neg_string": {
+    "parseOk": true,
+    "canonical": "(u- \"hello\")",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_type_unary_neg_bool": {
+    "parseOk": true,
+    "canonical": "(u- true)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_type_gt_string_number": {
+    "parseOk": true,
+    "canonical": "(> \"10\" 5)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_type_lt_bool_bool": {
+    "parseOk": true,
+    "canonical": "(< true false)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_fn_unknown_name": {
+    "parseOk": true,
+    "canonical": "(call customFunction 1 2 3)",
+    "evalOk": false,
+    "code": "expressions.unknown_function"
+  },
+  "cen_err_fn_unknown_in_interp": {
+    "parseOk": true,
+    "canonical": "(tpl \"Result: \" (call evaluateSecret password))",
+    "evalOk": false,
+    "code": "expressions.unknown_function"
+  },
+  "cen_err_fn_toInteger_invalid_string": {
+    "parseOk": true,
+    "canonical": "(call toInteger \"not_a_number\")",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_fn_toNumber_invalid_string": {
+    "parseOk": true,
+    "canonical": "(call toNumber \"not_a_float\")",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_fn_encodeUri_non_string": {
+    "parseOk": true,
+    "canonical": "(call encodeUri 12345)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "cen_err_syntax_invalid_escape": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_arith_add_ints": {
+    "parseOk": true,
+    "canonical": "(+ 2 3)",
+    "evalOk": true,
+    "value": 5
+  },
+  "divkit_arith_add_floats": {
+    "parseOk": true,
+    "canonical": "(+ 2.5 3.5)",
+    "evalOk": true,
+    "value": 6
+  },
+  "divkit_arith_add_int_float": {
+    "parseOk": true,
+    "canonical": "(+ 2 3.5)",
+    "evalOk": true,
+    "value": 5.5
+  },
+  "divkit_arith_sub_ints": {
+    "parseOk": true,
+    "canonical": "(- 10 4)",
+    "evalOk": true,
+    "value": 6
+  },
+  "divkit_arith_sub_floats": {
+    "parseOk": true,
+    "canonical": "(- 10.5 4.2)",
+    "evalOk": true,
+    "value": 6.3
+  },
+  "divkit_arith_sub_negative_result": {
+    "parseOk": true,
+    "canonical": "(- 4 10)",
+    "evalOk": true,
+    "value": -6
+  },
+  "divkit_arith_mul_ints": {
+    "parseOk": true,
+    "canonical": "(* 6 7)",
+    "evalOk": true,
+    "value": 42
+  },
+  "divkit_arith_mul_floats": {
+    "parseOk": true,
+    "canonical": "(* 2.5 4)",
+    "evalOk": true,
+    "value": 10
+  },
+  "divkit_arith_mul_zero": {
+    "parseOk": true,
+    "canonical": "(* 42 0)",
+    "evalOk": true,
+    "value": 0
+  },
+  "divkit_arith_div_ints_exact": {
+    "parseOk": true,
+    "canonical": "(/ 12 3)",
+    "evalOk": true,
+    "value": 4
+  },
+  "divkit_arith_div_ints_fractional": {
+    "parseOk": true,
+    "canonical": "(/ 7 2)",
+    "evalOk": true,
+    "value": 3.5
+  },
+  "divkit_arith_div_floats": {
+    "parseOk": true,
+    "canonical": "(/ 7.5 2.5)",
+    "evalOk": true,
+    "value": 3
+  },
+  "divkit_arith_mod_ints": {
+    "parseOk": true,
+    "canonical": "(% 10 3)",
+    "evalOk": true,
+    "value": 1
+  },
+  "divkit_arith_mod_zero_remainder": {
+    "parseOk": true,
+    "canonical": "(% 12 4)",
+    "evalOk": true,
+    "value": 0
+  },
+  "divkit_arith_unary_neg_int": {
+    "parseOk": true,
+    "canonical": "(u- 42)",
+    "evalOk": true,
+    "value": -42
+  },
+  "divkit_arith_unary_neg_float": {
+    "parseOk": true,
+    "canonical": "(u- 3.14)",
+    "evalOk": true,
+    "value": -3.14
+  },
+  "divkit_arith_unary_neg_expression": {
+    "parseOk": true,
+    "canonical": "(u- (+ 2 3))",
+    "evalOk": true,
+    "value": -5
+  },
+  "divkit_arith_unary_pos": {
+    "parseOk": true,
+    "canonical": "(u+ 42)",
+    "evalOk": true,
+    "value": 42
+  },
+  "divkit_arith_precedence_mul_add": {
+    "parseOk": true,
+    "canonical": "(+ 2 (* 3 4))",
+    "evalOk": true,
+    "value": 14
+  },
+  "divkit_arith_precedence_parentheses": {
+    "parseOk": true,
+    "canonical": "(* (+ 2 3) 4)",
+    "evalOk": true,
+    "value": 20
+  },
+  "divkit_arith_precedence_div_sub": {
+    "parseOk": true,
+    "canonical": "(- 20 (/ 10 2))",
+    "evalOk": true,
+    "value": 15
+  },
+  "divkit_arith_precedence_nested_parens": {
+    "parseOk": true,
+    "canonical": "(- (* (+ 2 3) (+ 4 1)) 5)",
+    "evalOk": true,
+    "value": 20
+  },
+  "divkit_arith_chained_add": {
+    "parseOk": true,
+    "canonical": "(+ (+ (+ (+ 1 2) 3) 4) 5)",
+    "evalOk": true,
+    "value": 15
+  },
+  "divkit_arith_chained_sub": {
+    "parseOk": true,
+    "canonical": "(- (- (- 100 20) 30) 10)",
+    "evalOk": true,
+    "value": 40
+  },
+  "divkit_arith_chained_mul": {
+    "parseOk": true,
+    "canonical": "(* (* 2 3) 4)",
+    "evalOk": true,
+    "value": 24
+  },
+  "divkit_arith_mixed_ops_1": {
+    "parseOk": true,
+    "canonical": "(- (+ 10 (* 5 2)) (/ 8 4))",
+    "evalOk": true,
+    "value": 18
+  },
+  "divkit_arith_mixed_ops_2": {
+    "parseOk": true,
+    "canonical": "(/ (* (+ 10 5) (- 2 8)) 4)",
+    "evalOk": true,
+    "value": -22.5
+  },
+  "divkit_arith_negative_operand_mul": {
+    "parseOk": true,
+    "canonical": "(* (u- 5) (u- 4))",
+    "evalOk": true,
+    "value": 20
+  },
+  "divkit_arith_negative_operand_add": {
+    "parseOk": true,
+    "canonical": "(+ 10 (u- 3))",
+    "evalOk": true,
+    "value": 7
+  },
+  "divkit_arith_negative_operand_sub": {
+    "parseOk": true,
+    "canonical": "(- 10 (u- 3))",
+    "evalOk": true,
+    "value": 13
+  },
+  "divkit_arith_double_negation": {
+    "parseOk": true,
+    "canonical": "(u- (u- 5))",
+    "evalOk": true,
+    "value": 5
+  },
+  "divkit_arith_mod_with_add": {
+    "parseOk": true,
+    "canonical": "(+ (% 10 3) 2)",
+    "evalOk": true,
+    "value": 3
+  },
+  "divkit_arith_mod_precedence": {
+    "parseOk": true,
+    "canonical": "(+ 10 (* (% 7 3) 2))",
+    "evalOk": true,
+    "value": 12
+  },
+  "divkit_arith_large_ints": {
+    "parseOk": true,
+    "canonical": "(+ 1000000 2000000)",
+    "evalOk": true,
+    "value": 3000000
+  },
+  "divkit_arith_small_floats": {
+    "parseOk": true,
+    "canonical": "(+ 0.001 0.002)",
+    "evalOk": true,
+    "value": 0.003
+  },
+  "divkit_arith_zero_div_nonzero": {
+    "parseOk": true,
+    "canonical": "(/ 0 5)",
+    "evalOk": true,
+    "value": 0
+  },
+  "divkit_arith_zero_mod_nonzero": {
+    "parseOk": true,
+    "canonical": "(% 0 5)",
+    "evalOk": true,
+    "value": 0
+  },
+  "divkit_arith_float_precision_mul": {
+    "parseOk": true,
+    "canonical": "(* 1.5 3)",
+    "evalOk": true,
+    "value": 4.5
+  },
+  "divkit_arith_complex_nested": {
+    "parseOk": true,
+    "canonical": "(- (+ 1 (* 2 (+ 3 (* 4 (- 5 3))))) 10)",
+    "evalOk": true,
+    "value": 13
+  },
+  "divkit_arith_whitespace_tolerance": {
+    "parseOk": true,
+    "canonical": "(+ 10 (* 20 3))",
+    "evalOk": true,
+    "value": 70
+  },
+  "divkit_comp_eq_ints_true": {
+    "parseOk": true,
+    "canonical": "(== 5 5)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_ints_false": {
+    "parseOk": true,
+    "canonical": "(== 5 6)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_neq_ints_true": {
+    "parseOk": true,
+    "canonical": "(!= 5 6)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_neq_ints_false": {
+    "parseOk": true,
+    "canonical": "(!= 5 5)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_lt_ints_true": {
+    "parseOk": true,
+    "canonical": "(< 3 5)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_lt_ints_false": {
+    "parseOk": true,
+    "canonical": "(< 5 3)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_lt_ints_equal": {
+    "parseOk": true,
+    "canonical": "(< 5 5)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_lte_ints_true_less": {
+    "parseOk": true,
+    "canonical": "(<= 3 5)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_lte_ints_true_equal": {
+    "parseOk": true,
+    "canonical": "(<= 5 5)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_lte_ints_false": {
+    "parseOk": true,
+    "canonical": "(<= 6 5)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_gt_ints_true": {
+    "parseOk": true,
+    "canonical": "(> 7 4)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_gt_ints_false": {
+    "parseOk": true,
+    "canonical": "(> 4 7)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_gt_ints_equal": {
+    "parseOk": true,
+    "canonical": "(> 4 4)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_gte_ints_true_greater": {
+    "parseOk": true,
+    "canonical": "(>= 7 4)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_gte_ints_true_equal": {
+    "parseOk": true,
+    "canonical": "(>= 4 4)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_gte_ints_false": {
+    "parseOk": true,
+    "canonical": "(>= 3 4)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_eq_floats_true": {
+    "parseOk": true,
+    "canonical": "(== 3.14 3.14)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_floats_false": {
+    "parseOk": true,
+    "canonical": "(== 3.14 3.15)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_lt_floats_true": {
+    "parseOk": true,
+    "canonical": "(< 2.71 3.14)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_gt_floats_true": {
+    "parseOk": true,
+    "canonical": "(> 3.14 2.71)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_int_float_true": {
+    "parseOk": true,
+    "canonical": "(== 5 5)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_lt_int_float_true": {
+    "parseOk": true,
+    "canonical": "(< 4 4.5)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_strings_true": {
+    "parseOk": true,
+    "canonical": "(== \"hello\" \"hello\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_strings_false": {
+    "parseOk": true,
+    "canonical": "(== \"hello\" \"world\")",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_neq_strings_true": {
+    "parseOk": true,
+    "canonical": "(!= \"hello\" \"world\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_booleans_true": {
+    "parseOk": true,
+    "canonical": "(== true true)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_booleans_false": {
+    "parseOk": true,
+    "canonical": "(== true false)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_neq_booleans_true": {
+    "parseOk": true,
+    "canonical": "(!= true false)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_null_null_true": {
+    "parseOk": true,
+    "canonical": "(== null null)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_neq_null_null_false": {
+    "parseOk": true,
+    "canonical": "(!= null null)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_eq_string_null_false": {
+    "parseOk": true,
+    "canonical": "(== \"abc\" null)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_neq_string_null_true": {
+    "parseOk": true,
+    "canonical": "(!= \"abc\" null)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_eq_int_null_false": {
+    "parseOk": true,
+    "canonical": "(== 42 null)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_comp_with_arith_left": {
+    "parseOk": true,
+    "canonical": "(== (+ 2 3) 5)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_with_arith_right": {
+    "parseOk": true,
+    "canonical": "(== 10 (* 2 5))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_with_arith_both": {
+    "parseOk": true,
+    "canonical": "(< (+ 2 3) (* 4 2))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_negative_numbers": {
+    "parseOk": true,
+    "canonical": "(< (u- 5) (u- 2))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_empty_strings_equal": {
+    "parseOk": true,
+    "canonical": "(== \"\" \"\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_empty_nonempty_string": {
+    "parseOk": true,
+    "canonical": "(!= \"\" \"a\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_comp_case_sensitive": {
+    "parseOk": true,
+    "canonical": "(== \"Apple\" \"apple\")",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_err_div_by_zero_int": {
+    "parseOk": true,
+    "canonical": "(/ 10 0)",
+    "evalOk": false,
+    "code": "expressions.division_by_zero"
+  },
+  "divkit_err_div_by_zero_expr": {
+    "parseOk": true,
+    "canonical": "(/ 10 (- 5 5))",
+    "evalOk": false,
+    "code": "expressions.division_by_zero"
+  },
+  "divkit_err_mod_by_zero": {
+    "parseOk": true,
+    "canonical": "(% 10 0)",
+    "evalOk": false,
+    "code": "expressions.division_by_zero"
+  },
+  "divkit_err_syntax_unclosed_paren": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_unexpected_token": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_unclosed_string_single": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_unclosed_string_double": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_unclosed_expression": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_incomplete_ternary": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_missing_ternary_colon": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_trailing_operator": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_leading_comma": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_syntax_double_comma": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_err_type_arith_string_minus": {
+    "parseOk": true,
+    "canonical": "(- \"hello\" \"world\")",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_arith_string_mul": {
+    "parseOk": true,
+    "canonical": "(* \"hello\" 3)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_arith_string_div": {
+    "parseOk": true,
+    "canonical": "(/ \"hello\" 2)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_logical_not_number": {
+    "parseOk": true,
+    "canonical": "(u! 42)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_logical_and_number": {
+    "parseOk": true,
+    "canonical": "(&& 42 true)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_logical_or_string": {
+    "parseOk": true,
+    "canonical": "(|| \"yes\" false)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_ternary_condition_nonbool": {
+    "parseOk": true,
+    "canonical": "(? 42 \"yes\" \"no\")",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_comp_incompatible": {
+    "parseOk": true,
+    "canonical": "(< 5 \"hello\")",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_type_comp_bool_number": {
+    "parseOk": true,
+    "canonical": "(> true 0)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_fn_unknown": {
+    "parseOk": true,
+    "canonical": "(call someNonExistentFunction 42)",
+    "evalOk": false,
+    "code": "expressions.unknown_function"
+  },
+  "divkit_err_fn_wrong_arg_count_few": {
+    "parseOk": true,
+    "canonical": "(call min 5)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_fn_wrong_arg_count_many": {
+    "parseOk": true,
+    "canonical": "(call abs 1 2)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_fn_wrong_arg_type": {
+    "parseOk": true,
+    "canonical": "(call abs \"hello\")",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_fn_len_non_string": {
+    "parseOk": true,
+    "canonical": "(call len 123)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_fn_substring_out_of_bounds": {
+    "parseOk": true,
+    "canonical": "(call substring \"hi\" 5 10)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_fn_substring_end_before_start": {
+    "parseOk": true,
+    "canonical": "(call substring \"hello\" 3 1)",
+    "evalOk": false,
+    "code": "expressions.type"
+  },
+  "divkit_err_syntax_empty_expression": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "divkit_fn_math_abs_pos": {
+    "parseOk": true,
+    "canonical": "(call abs 42)",
+    "evalOk": true,
+    "value": 42
+  },
+  "divkit_fn_math_abs_neg": {
+    "parseOk": true,
+    "canonical": "(call abs (u- 42))",
+    "evalOk": true,
+    "value": 42
+  },
+  "divkit_fn_math_abs_zero": {
+    "parseOk": true,
+    "canonical": "(call abs 0)",
+    "evalOk": true,
+    "value": 0
+  },
+  "divkit_fn_math_abs_float_neg": {
+    "parseOk": true,
+    "canonical": "(call abs (u- 3.14))",
+    "evalOk": true,
+    "value": 3.14
+  },
+  "divkit_fn_math_min_two": {
+    "parseOk": true,
+    "canonical": "(call min 5 10)",
+    "evalOk": true,
+    "value": 5
+  },
+  "divkit_fn_math_min_floats": {
+    "parseOk": true,
+    "canonical": "(call min 3.14 2.71)",
+    "evalOk": true,
+    "value": 2.71
+  },
+  "divkit_fn_math_min_negative": {
+    "parseOk": true,
+    "canonical": "(call min (u- 5) (u- 10))",
+    "evalOk": true,
+    "value": -10
+  },
+  "divkit_fn_math_max_two": {
+    "parseOk": true,
+    "canonical": "(call max 5 10)",
+    "evalOk": true,
+    "value": 10
+  },
+  "divkit_fn_math_max_floats": {
+    "parseOk": true,
+    "canonical": "(call max 3.14 2.71)",
+    "evalOk": true,
+    "value": 3.14
+  },
+  "divkit_fn_math_max_negative": {
+    "parseOk": true,
+    "canonical": "(call max (u- 5) (u- 10))",
+    "evalOk": true,
+    "value": -5
+  },
+  "divkit_fn_math_round_half_up": {
+    "parseOk": true,
+    "canonical": "(call round 3.6)",
+    "evalOk": true,
+    "value": 4
+  },
+  "divkit_fn_math_round_half_down": {
+    "parseOk": true,
+    "canonical": "(call round 3.2)",
+    "evalOk": true,
+    "value": 3
+  },
+  "divkit_fn_math_round_neg": {
+    "parseOk": true,
+    "canonical": "(call round (u- 3.7))",
+    "evalOk": true,
+    "value": -4
+  },
+  "divkit_fn_math_floor_pos": {
+    "parseOk": true,
+    "canonical": "(call floor 3.9)",
+    "evalOk": true,
+    "value": 3
+  },
+  "divkit_fn_math_floor_exact": {
+    "parseOk": true,
+    "canonical": "(call floor 3)",
+    "evalOk": true,
+    "value": 3
+  },
+  "divkit_fn_math_floor_neg": {
+    "parseOk": true,
+    "canonical": "(call floor (u- 3.1))",
+    "evalOk": true,
+    "value": -4
+  },
+  "divkit_fn_math_ceil_pos": {
+    "parseOk": true,
+    "canonical": "(call ceil 3.1)",
+    "evalOk": true,
+    "value": 4
+  },
+  "divkit_fn_math_ceil_exact": {
+    "parseOk": true,
+    "canonical": "(call ceil 3)",
+    "evalOk": true,
+    "value": 3
+  },
+  "divkit_fn_math_ceil_neg": {
+    "parseOk": true,
+    "canonical": "(call ceil (u- 3.9))",
+    "evalOk": true,
+    "value": -3
+  },
+  "divkit_fn_cast_to_boolean_true_str": {
+    "parseOk": true,
+    "canonical": "(call toBoolean \"true\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_fn_cast_to_boolean_false_str": {
+    "parseOk": true,
+    "canonical": "(call toBoolean \"false\")",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_fn_cast_to_boolean_int_one": {
+    "parseOk": true,
+    "canonical": "(call toBoolean 1)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_fn_cast_to_boolean_int_zero": {
+    "parseOk": true,
+    "canonical": "(call toBoolean 0)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_fn_cast_to_integer_str": {
+    "parseOk": true,
+    "canonical": "(call toInteger \"123\")",
+    "evalOk": true,
+    "value": 123
+  },
+  "divkit_fn_cast_to_integer_float": {
+    "parseOk": true,
+    "canonical": "(call toInteger 45.67)",
+    "evalOk": true,
+    "value": 45
+  },
+  "divkit_fn_cast_to_integer_bool_true": {
+    "parseOk": true,
+    "canonical": "(call toInteger true)",
+    "evalOk": true,
+    "value": 1
+  },
+  "divkit_fn_cast_to_integer_bool_false": {
+    "parseOk": true,
+    "canonical": "(call toInteger false)",
+    "evalOk": true,
+    "value": 0
+  },
+  "divkit_fn_cast_to_number_str": {
+    "parseOk": true,
+    "canonical": "(call toNumber \"123.45\")",
+    "evalOk": true,
+    "value": 123.45
+  },
+  "divkit_fn_cast_to_number_int": {
+    "parseOk": true,
+    "canonical": "(call toNumber 100)",
+    "evalOk": true,
+    "value": 100
+  },
+  "divkit_fn_cast_to_string_int": {
+    "parseOk": true,
+    "canonical": "(call toString 42)",
+    "evalOk": true,
+    "value": "42"
+  },
+  "divkit_fn_cast_to_string_float": {
+    "parseOk": true,
+    "canonical": "(call toString 3.14)",
+    "evalOk": true,
+    "value": "3.14"
+  },
+  "divkit_fn_cast_to_string_bool": {
+    "parseOk": true,
+    "canonical": "(call toString true)",
+    "evalOk": true,
+    "value": "true"
+  },
+  "divkit_fn_math_nested_functions": {
+    "parseOk": true,
+    "canonical": "(call max (call min 10 20) (call abs (u- 15)))",
+    "evalOk": true,
+    "value": 15
+  },
+  "divkit_fn_math_in_expression": {
+    "parseOk": true,
+    "canonical": "(/ (call round (* val 100)) 100)",
+    "evalOk": true,
+    "value": 3.14
+  },
+  "divkit_fn_math_power_style_emulated": {
+    "parseOk": true,
+    "canonical": "(call abs (* x x))",
+    "evalOk": true,
+    "value": 25
+  },
+  "divkit_log_and_true_true": {
+    "parseOk": true,
+    "canonical": "(&& true true)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_and_true_false": {
+    "parseOk": true,
+    "canonical": "(&& true false)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_and_false_true": {
+    "parseOk": true,
+    "canonical": "(&& false true)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_and_false_false": {
+    "parseOk": true,
+    "canonical": "(&& false false)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_or_true_true": {
+    "parseOk": true,
+    "canonical": "(|| true true)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_or_true_false": {
+    "parseOk": true,
+    "canonical": "(|| true false)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_or_false_true": {
+    "parseOk": true,
+    "canonical": "(|| false true)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_or_false_false": {
+    "parseOk": true,
+    "canonical": "(|| false false)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_not_true": {
+    "parseOk": true,
+    "canonical": "(u! true)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_not_false": {
+    "parseOk": true,
+    "canonical": "(u! false)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_not_double": {
+    "parseOk": true,
+    "canonical": "(u! (u! true))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_not_expression": {
+    "parseOk": true,
+    "canonical": "(u! (> 5 10))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_and_precedence_over_or": {
+    "parseOk": true,
+    "canonical": "(|| true (&& false false))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_and_precedence_with_parens": {
+    "parseOk": true,
+    "canonical": "(&& (|| true false) false)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_chained_and_true": {
+    "parseOk": true,
+    "canonical": "(&& (&& (&& true true) true) true)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_chained_and_false": {
+    "parseOk": true,
+    "canonical": "(&& (&& (&& true true) false) true)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_chained_or_true": {
+    "parseOk": true,
+    "canonical": "(|| (|| (|| false false) true) false)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_chained_or_false": {
+    "parseOk": true,
+    "canonical": "(|| (|| (|| false false) false) false)",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_comp_in_and": {
+    "parseOk": true,
+    "canonical": "(&& (> 5 3) (< 10 20))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_comp_in_or": {
+    "parseOk": true,
+    "canonical": "(|| (< 5 3) (< 10 20))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_mixed_comp_log_1": {
+    "parseOk": true,
+    "canonical": "(&& (== (+ 2 2) 4) (== (* 3 3) 9))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_mixed_comp_log_2": {
+    "parseOk": true,
+    "canonical": "(|| (== (+ 2 2) 5) (== (* 3 3) 9))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_complex_nested_1": {
+    "parseOk": true,
+    "canonical": "(|| (u! (&& (> 5 3) (< 2 1))) (&& (== 4 4) (u! false)))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_complex_nested_2": {
+    "parseOk": true,
+    "canonical": "(&& (|| (&& true false) (&& true true)) (u! false))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_short_circuit_and": {
+    "parseOk": true,
+    "canonical": "(&& false (== (/ 10 0) 0))",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_log_short_circuit_or": {
+    "parseOk": true,
+    "canonical": "(|| true (== (/ 10 0) 0))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_not_eq": {
+    "parseOk": true,
+    "canonical": "(u! (== 10 20))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_three_way_comparison_logic": {
+    "parseOk": true,
+    "canonical": "(&& (&& (> 5 2) (> 2 1)) (> 1 0))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_range_check_inside": {
+    "parseOk": true,
+    "canonical": "(&& (>= x 10) (<= x 20))",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_log_range_check_outside": {
+    "parseOk": true,
+    "canonical": "(&& (>= x 10) (<= x 20))",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_str_literal_single_quotes": {
+    "parseOk": true,
+    "canonical": "\"hello world\"",
+    "evalOk": true,
+    "value": "hello world"
+  },
+  "divkit_str_literal_double_quotes": {
+    "parseOk": true,
+    "canonical": "\"hello world\"",
+    "evalOk": true,
+    "value": "hello world"
+  },
+  "divkit_str_empty": {
+    "parseOk": true,
+    "canonical": "\"\"",
+    "evalOk": true,
+    "value": ""
+  },
+  "divkit_str_concat_literals": {
+    "parseOk": true,
+    "canonical": "(+ \"hello \" \"world\")",
+    "evalOk": true,
+    "value": "hello world"
+  },
+  "divkit_str_concat_string_and_int": {
+    "parseOk": true,
+    "canonical": "(+ \"item_\" 42)",
+    "evalOk": true,
+    "value": "item_42"
+  },
+  "divkit_str_concat_int_and_string": {
+    "parseOk": true,
+    "canonical": "(+ 42 \"_item\")",
+    "evalOk": true,
+    "value": "42_item"
+  },
+  "divkit_str_concat_string_and_bool": {
+    "parseOk": true,
+    "canonical": "(+ \"is_valid: \" true)",
+    "evalOk": true,
+    "value": "is_valid: true"
+  },
+  "divkit_str_concat_string_and_float": {
+    "parseOk": true,
+    "canonical": "(+ \"price: \" 19.99)",
+    "evalOk": true,
+    "value": "price: 19.99"
+  },
+  "divkit_str_concat_multiple": {
+    "parseOk": true,
+    "canonical": "(+ (+ (+ \"a\" \"b\") \"c\") \"d\")",
+    "evalOk": true,
+    "value": "abcd"
+  },
+  "divkit_str_len_basic": {
+    "parseOk": true,
+    "canonical": "(call len \"hello\")",
+    "evalOk": true,
+    "value": 5
+  },
+  "divkit_str_len_empty": {
+    "parseOk": true,
+    "canonical": "(call len \"\")",
+    "evalOk": true,
+    "value": 0
+  },
+  "divkit_str_len_unicode": {
+    "parseOk": true,
+    "canonical": "(call len \"café\")",
+    "evalOk": true,
+    "value": 4
+  },
+  "divkit_str_len_from_state": {
+    "parseOk": true,
+    "canonical": "(call len username)",
+    "evalOk": true,
+    "value": 5
+  },
+  "divkit_str_trim_both": {
+    "parseOk": true,
+    "canonical": "(call trim \"   hello world   \")",
+    "evalOk": true,
+    "value": "hello world"
+  },
+  "divkit_str_trim_none": {
+    "parseOk": true,
+    "canonical": "(call trim \"hello\")",
+    "evalOk": true,
+    "value": "hello"
+  },
+  "divkit_str_trim_empty": {
+    "parseOk": true,
+    "canonical": "(call trim \"   \")",
+    "evalOk": true,
+    "value": ""
+  },
+  "divkit_str_toupper": {
+    "parseOk": true,
+    "canonical": "(call toUpperCase \"hello world\")",
+    "evalOk": true,
+    "value": "HELLO WORLD"
+  },
+  "divkit_str_tolower": {
+    "parseOk": true,
+    "canonical": "(call toLowerCase \"HELLO WORLD\")",
+    "evalOk": true,
+    "value": "hello world"
+  },
+  "divkit_str_contains_true": {
+    "parseOk": true,
+    "canonical": "(call contains \"hello world\" \"world\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_str_contains_false": {
+    "parseOk": true,
+    "canonical": "(call contains \"hello world\" \"foo\")",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_str_startswith_true": {
+    "parseOk": true,
+    "canonical": "(call startsWith \"hello world\" \"hello\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_str_startswith_false": {
+    "parseOk": true,
+    "canonical": "(call startsWith \"hello world\" \"world\")",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_str_endswith_true": {
+    "parseOk": true,
+    "canonical": "(call endsWith \"hello world\" \"world\")",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_str_endswith_false": {
+    "parseOk": true,
+    "canonical": "(call endsWith \"hello world\" \"hello\")",
+    "evalOk": true,
+    "value": false
+  },
+  "divkit_str_substring_two_args": {
+    "parseOk": true,
+    "canonical": "(call substring \"hello world\" 0 5)",
+    "evalOk": true,
+    "value": "hello"
+  },
+  "divkit_str_substring_middle": {
+    "parseOk": true,
+    "canonical": "(call substring \"hello world\" 6 11)",
+    "evalOk": true,
+    "value": "world"
+  },
+  "divkit_str_substring_one_arg": {
+    "parseOk": true,
+    "canonical": "(call substring \"hello world\" 6)",
+    "evalOk": true,
+    "value": "world"
+  },
+  "divkit_str_replace": {
+    "parseOk": true,
+    "canonical": "(call replace \"hello world\" \"world\" \"there\")",
+    "evalOk": true,
+    "value": "hello there"
+  },
+  "divkit_str_encode_uri": {
+    "parseOk": true,
+    "canonical": "(call encodeUri \"hello world & more\")",
+    "evalOk": true,
+    "value": "hello%20world%20%26%20more"
+  },
+  "divkit_str_escaped_quote_single": {
+    "parseOk": true,
+    "canonical": "\"it's fine\"",
+    "evalOk": true,
+    "value": "it's fine"
+  },
+  "divkit_str_escaped_quote_double": {
+    "parseOk": true,
+    "canonical": "\"quote: \\\"hello\\\"\"",
+    "evalOk": true,
+    "value": "quote: \"hello\""
+  },
+  "divkit_str_escaped_newline": {
+    "parseOk": true,
+    "canonical": "\"line1\\nline2\"",
+    "evalOk": true,
+    "value": "line1\nline2"
+  },
+  "divkit_str_interpolation_single_var": {
+    "parseOk": true,
+    "canonical": "(tpl \"Hello \" name \"!\")",
+    "evalOk": true,
+    "value": "Hello Alice!"
+  },
+  "divkit_str_interpolation_multi_var": {
+    "parseOk": true,
+    "canonical": "(tpl first_name \" \" last_name)",
+    "evalOk": true,
+    "value": "Jane Doe"
+  },
+  "divkit_str_interpolation_with_expr": {
+    "parseOk": true,
+    "canonical": "(tpl \"Total: $\" (* price quantity))",
+    "evalOk": true,
+    "value": "Total: $30"
+  },
+  "divkit_str_interpolation_ternary": {
+    "parseOk": true,
+    "canonical": "(tpl \"You have \" count \" \" (? (== count 1) \"item\" \"items\") \".\")",
+    "evalOk": true,
+    "value": "You have 5 items."
+  },
+  "divkit_str_interpolation_ternary_one": {
+    "parseOk": true,
+    "canonical": "(tpl \"You have \" count \" \" (? (== count 1) \"item\" \"items\") \".\")",
+    "evalOk": true,
+    "value": "You have 1 item."
+  },
+  "divkit_str_interpolation_plain_text": {
+    "parseOk": true,
+    "canonical": "\"No expressions here.\"",
+    "evalOk": true,
+    "value": "No expressions here."
+  },
+  "divkit_str_interpolation_escaped_at": {
+    "parseOk": true,
+    "canonical": "(tpl \"Email: test@{domain}\")",
+    "evalOk": true,
+    "value": "Email: test@{domain}"
+  },
+  "divkit_str_concat_with_ternary": {
+    "parseOk": true,
+    "canonical": "(+ (+ \"Hello, \" (? (!= name null) name \"Guest\")) \"!\")",
+    "evalOk": true,
+    "value": "Hello, Guest!"
+  },
+  "divkit_ternary_simple_true": {
+    "parseOk": true,
+    "canonical": "(? true \"yes\" \"no\")",
+    "evalOk": true,
+    "value": "yes"
+  },
+  "divkit_ternary_simple_false": {
+    "parseOk": true,
+    "canonical": "(? false \"yes\" \"no\")",
+    "evalOk": true,
+    "value": "no"
+  },
+  "divkit_ternary_with_condition_expression_true": {
+    "parseOk": true,
+    "canonical": "(? (> 5 3) 100 200)",
+    "evalOk": true,
+    "value": 100
+  },
+  "divkit_ternary_with_condition_expression_false": {
+    "parseOk": true,
+    "canonical": "(? (< 5 3) 100 200)",
+    "evalOk": true,
+    "value": 200
+  },
+  "divkit_ternary_with_arith_branches": {
+    "parseOk": true,
+    "canonical": "(? true (+ 2 3) (* 10 2))",
+    "evalOk": true,
+    "value": 5
+  },
+  "divkit_ternary_with_arith_branches_false": {
+    "parseOk": true,
+    "canonical": "(? false (+ 2 3) (* 10 2))",
+    "evalOk": true,
+    "value": 20
+  },
+  "divkit_ternary_nested_condition_then": {
+    "parseOk": true,
+    "canonical": "(? true (? false 1 2) 3)",
+    "evalOk": true,
+    "value": 2
+  },
+  "divkit_ternary_nested_condition_else": {
+    "parseOk": true,
+    "canonical": "(? false 1 (? true 2 3))",
+    "evalOk": true,
+    "value": 2
+  },
+  "divkit_ternary_nested_condition_else_deep": {
+    "parseOk": true,
+    "canonical": "(? false 1 (? false 2 3))",
+    "evalOk": true,
+    "value": 3
+  },
+  "divkit_ternary_chained_if_else": {
+    "parseOk": true,
+    "canonical": "(? (>= score 90) \"A\" (? (>= score 80) \"B\" (? (>= score 70) \"C\" \"F\")))",
+    "evalOk": true,
+    "value": "B"
+  },
+  "divkit_ternary_chained_if_else_top": {
+    "parseOk": true,
+    "canonical": "(? (>= score 90) \"A\" (? (>= score 80) \"B\" (? (>= score 70) \"C\" \"F\")))",
+    "evalOk": true,
+    "value": "A"
+  },
+  "divkit_ternary_chained_if_else_bottom": {
+    "parseOk": true,
+    "canonical": "(? (>= score 90) \"A\" (? (>= score 80) \"B\" (? (>= score 70) \"C\" \"F\")))",
+    "evalOk": true,
+    "value": "F"
+  },
+  "divkit_ternary_boolean_branches": {
+    "parseOk": true,
+    "canonical": "(? (== 5 5) true false)",
+    "evalOk": true,
+    "value": true
+  },
+  "divkit_ternary_null_branch": {
+    "parseOk": true,
+    "canonical": "(? flag \"present\" null)",
+    "evalOk": true,
+    "value": null
+  },
+  "divkit_ternary_complex_condition": {
+    "parseOk": true,
+    "canonical": "(? (&& (>= age 18) has_id) \"allowed\" \"denied\")",
+    "evalOk": true,
+    "value": "allowed"
+  },
+  "divkit_ternary_complex_condition_fail": {
+    "parseOk": true,
+    "canonical": "(? (&& (>= age 18) has_id) \"allowed\" \"denied\")",
+    "evalOk": true,
+    "value": "denied"
+  },
+  "divkit_ternary_short_circuit_then_branch": {
+    "parseOk": true,
+    "canonical": "(? true \"ok\" (/ 10 0))",
+    "evalOk": true,
+    "value": "ok"
+  },
+  "divkit_ternary_short_circuit_else_branch": {
+    "parseOk": true,
+    "canonical": "(? false (/ 10 0) \"ok\")",
+    "evalOk": true,
+    "value": "ok"
+  },
+  "divkit_ternary_in_arithmetic": {
+    "parseOk": true,
+    "canonical": "(+ 10 (? is_premium 5 0))",
+    "evalOk": true,
+    "value": 15
+  },
+  "divkit_ternary_in_arithmetic_false": {
+    "parseOk": true,
+    "canonical": "(+ 10 (? is_premium 5 0))",
+    "evalOk": true,
+    "value": 10
+  },
+  "divkit_ternary_in_string_concat": {
+    "parseOk": true,
+    "canonical": "(+ \"Status: \" (? active \"Online\" \"Offline\"))",
+    "evalOk": true,
+    "value": "Status: Online"
+  },
+  "divkit_ternary_in_string_concat_false": {
+    "parseOk": true,
+    "canonical": "(+ \"Status: \" (? active \"Online\" \"Offline\"))",
+    "evalOk": true,
+    "value": "Status: Offline"
+  },
+  "divkit_ternary_whitespace": {
+    "parseOk": true,
+    "canonical": "(? (> x 0) \"pos\" \"non-pos\")",
+    "evalOk": true,
+    "value": "pos"
+  },
+  "divkit_ternary_eval_state_expr": {
+    "parseOk": true,
+    "canonical": "(? (== count 1) item_name (+ item_name \"s\"))",
+    "evalOk": true,
+    "value": "apples"
+  },
+  "divkit_ternary_eval_state_expr_single": {
+    "parseOk": true,
+    "canonical": "(? (== count 1) item_name (+ item_name \"s\"))",
+    "evalOk": true,
+    "value": "apple"
+  },
+  "vaxel_proto_guard_dunder_proto": {
+    "parseOk": true,
+    "canonical": "(. user __proto__)",
+    "evalOk": true,
+    "value": null
+  },
+  "vaxel_proto_guard_constructor": {
+    "parseOk": true,
+    "canonical": "(. user constructor)",
+    "evalOk": true,
+    "value": null
+  },
+  "vaxel_proto_guard_prototype": {
+    "parseOk": true,
+    "canonical": "(. user prototype)",
+    "evalOk": true,
+    "value": null
+  },
+  "vaxel_array_length_gt_one": {
+    "parseOk": true,
+    "canonical": "(> (. tabs length) 1)",
+    "evalOk": true,
+    "value": true
+  },
+  "vaxel_err_unknown_field": {
+    "parseOk": true,
+    "canonical": "(+ undeclared_signal 1)",
+    "evalOk": false,
+    "code": "expressions.unknown_field"
+  },
+  "vaxel_err_cap_depth_exceeded": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  },
+  "vaxel_err_cap_length_exceeded": {
+    "parseOk": false,
+    "canonical": null,
+    "evalOk": false,
+    "code": "expressions.syntax"
+  }
+}

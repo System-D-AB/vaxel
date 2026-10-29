@@ -18,16 +18,21 @@ else
         </div>
     }
 
-    <form method="post" action="/contact" vx-post vx-target="#contact" id="contact-form">
+    <form method="post" action="/contact" vx-post vx-target="#contact" id="contact-form"
+          vx-signals='{"contactName":"","contactMessage":""}'>
         @Html.AntiForgeryToken()
         <div style="margin-bottom: 1rem;">
             <label style="display: block; margin-bottom: 0.25rem;">Name</label>
-            <input type="text" name="name" value="@Model.Name" required style="width: 100%; box-sizing: border-box;" />
+            <input type="text" name="name" value="@Model.Name" vx-bind="contactName" required style="width: 100%; box-sizing: border-box;" />
         </div>
         <div style="margin-bottom: 1rem;">
             <label style="display: block; margin-bottom: 0.25rem;">Message</label>
-            <textarea name="message" rows="4" required style="width: 100%; box-sizing: border-box; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 4px; padding: 0.5rem;">@Model.Message</textarea>
+            <textarea name="message" rows="4" vx-bind="contactMessage" required style="width: 100%; box-sizing: border-box; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 4px; padding: 0.5rem;">@Model.Message</textarea>
+            <small id="contact-char-count" vx-text="@@{ len(contactMessage) } / 500 characters" vx-class:is-over-limit="len(contactMessage) > 500" style="display: block; margin-top: 0.25rem; color: #94a3b8;">@((Model.Message ?? "").Length) / 500 characters</small>
         </div>
-        <button type="submit">Send Message</button>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <button type="submit" vx-attr:disabled="len(contactMessage) > 500">Send Message</button>
+            <span id="contact-dirty" vx-show="contactName != '' || contactMessage != ''" hidden style="font-size: 0.85rem; color: #94a3b8;">Draft in progress</span>
+        </div>
     </form>
 }

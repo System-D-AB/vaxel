@@ -1,0 +1,12 @@
+[
+  "cen_err_div_zero_direct",
+  "cen_err_div_zero_variable",
+  "cen_err_mod_zero_variable",
+  "cen_err_fn_toInteger_invalid_string",
+  "cen_err_fn_toNumber_invalid_string",
+  "divkit_err_div_by_zero_int",
+  "divkit_err_div_by_zero_expr",
+  "divkit_err_mod_by_zero",
+  "divkit_err_fn_substring_out_of_bounds",
+  "divkit_err_fn_substring_end_before_start"
+]

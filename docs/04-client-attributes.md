@@ -1,6 +1,6 @@
 # 04 — Client attributes
 
-The vocabulary is **closed**: an agent implementing this spec supports these attributes and no others. Every value is data — a URL, a selector, a signal name, a duration, a literal string, a media query. Nothing is parsed as an expression, and there is no escape syntax that would make one (R2).
+The vocabulary is **closed**: an agent implementing this spec supports these attributes and no others. Every value is data — a URL, a selector, a signal name, a duration, a literal string, a media query — or a **pure expression over signals** in binding attributes (R2). Nothing is evaluated as JavaScript (`eval` or `Function()`).
 
 Attributes are written in Razor through Tag Helpers ([05 — .NET API](05-dotnet-api.md)); the raw names below are the contract between the Tag Helpers and the agent.
 
@@ -8,7 +8,7 @@ Attributes are written in Razor through Tag Helpers ([05 — .NET API](05-dotnet
 
 **Order.** Attributes are processed depth-first through the DOM, and left-to-right within an element. Patches apply in document order; directives apply after all patches. Two bindings writing the same property is a last-one-wins race and the agent reports it in development.
 
-**Naming.** Signal names are camelCase everywhere — wire, seeds, bindings. There is no case-conversion modifier because there is no expression syntax that would make a name ambiguous.
+**Naming.** Signal names are camelCase everywhere — wire, seeds, bindings.
 
 **Status (the `1.0` column).** This vocabulary is the full contract. The shipped 1.0 agent does not implement all of it yet; the `1.0` column states what is in the bundle today so a view is not designed around an inert attribute. The remaining triggers and modifiers are scheduled for `v1.1-triggers`; a conformance test (`VocabularyHonestyTests`) fails if the bundle and this column disagree.
 
@@ -73,19 +73,32 @@ Every modifier below is **not in the 1.0 bundle** (⬜); they land with `v1.1-tr
 
 ## Signal bindings
 
-Every binding names **one signal**. No operators, no comparisons, no negation, no dotted paths into computed shapes — if a view needs a condition, the server sends the answer as a signal or a fragment.
+`vx-show`, `vx-class:<name>`, `vx-attr:<name>`, and `vx-text` accept either a signal name or a **closed expression over signals** (Rule R2). `vx-bind` and `vx-style:<prop>` take a single signal name only. Each binding runs inside a tracked `effect` from the signal store, re-evaluating on **only** the signals its expression actually read.
 
 | Attribute | 1.0 | Effect |
 |---|---|---|
-| `vx-text` | ✅ | Element's text content becomes the signal's value, stringified |
-| `vx-show` | ✅ | Element is hidden (`hidden` attribute) when the signal is falsy |
-| `vx-class:<name>` | ✅ | Class `<name>` present while the signal is truthy |
-| `vx-attr:<name>` | ✅ | Attribute `<name>` set to the signal's value; removed when `null`/`false` |
-| `vx-style:<prop>` | ✅ | Inline style property set through CSSOM. Sharp tool: prefer `vx-class`, and never bind untrusted values |
-| `vx-bind` | ✅ | Two-way: input's value ⇄ signal. Checkbox binds boolean, number input binds number |
+| `vx-text` | ✅ | Element's `textContent` becomes the expression's value, or an interpolated string (`"Showing @{ count } rows"`). Never sets `innerHTML` |
+| `vx-show` | ✅ | Element is shown when the boolean expression is `true`, and hidden (`hidden` attribute) when `false` or on any evaluation refusal |
+| `vx-class:<name>` | ✅ | Class `<name>` present while the boolean expression evaluates to `true` |
+| `vx-attr:<name>` | ✅ | Attribute `<name>` set to the expression's value; removed when `null`/`false`. Refused at render time on `href`, `src`, `action`, `formaction`, `style`, and `on*` |
+| `vx-style:<prop>` | ✅ | Inline style property set through CSSOM from a single signal name. Sharp tool: prefer `vx-class`, and never bind untrusted values |
+| `vx-bind` | ✅ | Two-way: input's value ⇄ signal name. Checkbox binds boolean, number input binds number |
 | `vx-bind-event` | ⬜ | Which events sync the binding (default: `input` for text, `change` for the rest) |
 | `vx-bind-prop` | ⬜ | Bind an element *property* rather than its value |
-| `vx-signal-set:<event>` | ⬜ | On `<event>`, set the named signal to a literal — `vx-signal-set:click="tab=submissions"` |
+| `vx-signal-set:<event>` | ⬜ | On `<event>`, set the named signal to a literal or expression — `vx-signal-set:click="tab='submissions'"` |
+
+### Closed expression grammar
+
+- **Literals:** numbers (`42`, `3.14`), strings (`'…'` or `"…"` with `\n \t \r \\ \' \" \@` escapes), `true`, `false`, `null`.
+- **References:** identifiers with dotted member access into the signal bag (`draft.name`, `tabs.length`). Member lookup uses own-property checks (`Object.prototype.hasOwnProperty`) and yields `null` for `__proto__`, `constructor`, and `prototype`.
+- **Operators:** arithmetic `+ - * / %`, comparison `== != < <= > >=`, logical `&& || !` (strict boolean operands, short-circuiting), unary `+ -`, ternary `cond ? a : b`, parentheses `( … )`.
+- **Functions (20-function pure whitelist):**
+  - Math: `abs(n)`, `ceil(n)`, `floor(n)`, `round(n)`, `min(a, b)`, `max(a, b)`
+  - String: `len(s)`, `trim(s)`, `toLowerCase(s)`, `toUpperCase(s)`, `contains(s, sub)`, `startsWith(s, prefix)`, `endsWith(s, suffix)`, `substring(s, start[, end])`, `replace(s, target, replacement)`, `encodeUri(s)`
+  - Casts: `toBoolean(v)`, `toInteger(v)`, `toNumber(v)`, `toString(v)`
+- **Framing:** in `vx-show`, `vx-class:*`, and `vx-attr:*`, the attribute value is the bare expression (`vx-show="tabs.length > 1"`). In `vx-text`, either a bare expression (`vx-text="draftSeq"`) or `@{ … }` interpolation inside text (`vx-text="Showing @{ count } rows"`, with `\@` escaping a literal `@`) is accepted.
+- **Caps and refusals:** expressions are capped at **512 characters** and **32 nesting levels**. Any syntax error, unknown function, unknown top-level signal, type mismatch, or division by zero produces a structured refusal (`expressions.*`) and emits `vx:error`; in a boolean binding (`vx-show`, `vx-class:*`, boolean `vx-attr:*`), a refusal evaluates to `false` (disabling/hiding rather than silently enabling).
+- **Deliberately excluded:** assignment, `[]` indexing, `??`, lambdas, loops, globals, `window`, DOM access, `new`, and locale/currency/date formatting (`fmt` stays server-rendered).
 
 ### Signal state
 
@@ -101,7 +114,7 @@ Every binding names **one signal**. No operators, no comparisons, no negation, n
 
 **Persistence and URL sync are explicit name lists, never wildcards.** Persisting "everything" is how a session identifier ends up in `localStorage`; syncing "everything" is how a filter box's contents end up in someone's shared link.
 
-`vx-url-sync` is the recommended way to hold shell state, because it reinforces R3: state that belongs in the URL ends up in the URL, so the full page route can render it.
+`vx-url-sync` is the recommended way to hold shell state, because it reinforces R3: state that belongs in the URL ends up in the URL, so the full page route can render it. Setting or patching a signal to `null` or `undefined` deletes the key from the store, removes its entry from `vx-persist` / `vx-persist-session` storage, deletes its parameter from the `vx-url-sync` query string, and omits the key from the `VX-Signals` header so `[FromSignals]` binds the server model's default.
 
 ### One owner per property
 
@@ -114,9 +127,9 @@ The development build warns when a patch sets a property that a binding on the s
 
 This is the only real hazard of keeping a reactive layer at all, and it is the price of the last mile.
 
-### Why bindings are this thin
+### Why bindings use a closed interpreter
 
-Because the alternative is an expression language, and an expression language is either interpreted (a parser, a grammar, and a second evaluator to keep in parity) or compiled (`Function()`, and `unsafe-eval` forever). The server already knows whether the tab is active, whether the button should be disabled, and what the count is. Sending `{"tabIsSubmissions": true}` is one JSON key; sending `$tab === 'submissions'` is a language.
+Because `eval` and `new Function` break `script-src 'self'`, while forcing every `tabs.length > 1` or `name == '' || saving` display fact through a server round trip or a redundant boolean signal hurts authoring ergonomics. By lifting a small, closed expression interpreter (305+ golden cases shared between the JS evaluator and the C# render-time validator), vaxel closes the Alpine ergonomics gap while keeping zero `unsafe-eval` and failing typos at build/render time when a signal schema is registered.
 
 ---
 

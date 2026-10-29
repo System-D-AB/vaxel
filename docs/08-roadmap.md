@@ -25,7 +25,7 @@
 
 Three questions gate every proposed feature:
 
-1. **Does it require evaluating a string on the client?** Then it is out (R2), no matter how convenient.
+1. **Does it require evaluating a string as JavaScript (`eval`/`Function`) on the client?** Then it is out (R2), no matter how convenient. Closed AST interpretation over signals with render-time validation is in; arbitrary JS execution is not.
 2. **Does it require state on the server between requests?** Then it is out (R4) — that is Blazor Server's bargain, and applications that want it should take that bargain directly.
 3. **Can the application do it in twenty lines of its own JavaScript in an island?** Then it should, and the framework should stay out of the way.
 
@@ -36,10 +36,10 @@ The failure mode for a project like this is not being wrong; it is being *comple
 | | vaxel | Datastar | htmx (+Alpine) | Hotwire | Blazor Server | Blazor WASM |
 |---|---|---|---|---|---|---|
 | Rendering | server only | server + client bindings | server (+client via Alpine) | server | server | client |
-| Client expressions | **none** | `Function()` | none (Alpine: `Function()`) | Stimulus (JS classes) | n/a | n/a |
-| Runs under `script-src 'self'` | **yes** | no (`unsafe-eval`) | htmx alone yes; Alpine needs the CSP build | yes | yes | yes |
+| Client expressions | **closed AST interpreter + C# schema check (no `eval`)** | `Function()` | none (Alpine: `Function()`) | Stimulus (JS classes) | n/a | n/a |
+| Runs under `script-src 'self'` | **yes** | no (`unsafe-eval`) | htmx alone yes; Alpine default needs `unsafe-eval` | yes | yes | yes |
 | Per-user server state | none | none | none | none | circuit + socket | none |
-| Client payload | ~9–10 KB (signals + agent + morph) | ~11 KB | ~17 KB (+Alpine ~15 KB) | ~40 KB | small | multi-MB runtime |
+| Client payload | ≤ 20 KB gzip (signals + expressions + agent + morph) | ~11 KB | ~17 KB (+Alpine ~15 KB) | ~40 KB | small | multi-MB runtime |
 | Build step | none | none | none | typical | none | required |
 | .NET integration | native (Tag Helpers, ViewComponents, model binding) | SDK, young | community helpers | DIY | first-party | first-party |
 | State model | signals as advisory input | signals | none | none | component tree | component tree |

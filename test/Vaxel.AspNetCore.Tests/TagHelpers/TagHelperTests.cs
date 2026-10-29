@@ -124,16 +124,74 @@ public sealed class TagHelperTests : IClassFixture<ComposerApiFactory>
     [InlineData("tab == 'submissions'")]
     [InlineData("count > 5")]
     [InlineData("!isActive")]
-    [InlineData("foo()")]
     [InlineData("a + b")]
-    public void ExpressionValue_Rejected(string invalidExpression)
+    [InlineData("Showing @{ count } rows")]
+    [InlineData("tabs.length > 1 ? 'many' : 'one'")]
+    public void ValidExpressionValue_Accepted(string validExpression)
+    {
+        var tagHelper = new VxBindTagHelper { VxText = validExpression };
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("span", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        tagHelper.Process(context, output);
+
+        Assert.Equal(validExpression, output.Attributes["vx-text"].Value);
+    }
+
+    [Theory]
+    [InlineData("foo()")]
+    [InlineData("2 + + * 3")]
+    [InlineData("user[0]")]
+    [InlineData("a ?? b")]
+    [InlineData("42 + true")]
+    [InlineData("Showing @{ } rows")]
+    public void InvalidExpressionValue_RejectedWithSpan(string invalidExpression)
     {
         var tagHelper = new VxBindTagHelper { VxText = invalidExpression };
         var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
         var output = new TagHelperOutput("span", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
 
         var ex = Assert.Throws<VaxelTagHelperException>(() => tagHelper.Process(context, output));
-        Assert.Contains("Per Rule R2", ex.Message);
+        Assert.Contains("span", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ExpressionExceedingCaps_RejectedAtRenderTime()
+    {
+        var deepExpr = new string('(', 33) + "1" + new string(')', 33);
+        var tagHelper = new VxBindTagHelper { VxShow = deepExpr };
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("div", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        var ex = Assert.Throws<VaxelTagHelperException>(() => tagHelper.Process(context, output));
+        Assert.Contains("expressions.syntax", ex.Message);
+
+        var longExpr = "'" + new string('a', 520) + "'";
+        var tagHelperLong = new VxBindTagHelper { VxText = longExpr };
+        var exLong = Assert.Throws<VaxelTagHelperException>(() => tagHelperLong.Process(context, output));
+        Assert.Contains("expressions.syntax", exLong.Message);
+    }
+
+    [Theory]
+    [InlineData("href")]
+    [InlineData("src")]
+    [InlineData("action")]
+    [InlineData("formaction")]
+    [InlineData("style")]
+    [InlineData("onclick")]
+    [InlineData("onmouseover")]
+    [InlineData("ONLOAD")]
+    public void ForbiddenBoundAttributes_RefusedAtRenderTime(string forbiddenAttr)
+    {
+        var tagHelper = new VxBindTagHelper
+        {
+            Attributes = new Dictionary<string, string> { [forbiddenAttr] = "targetUrl" }
+        };
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("a", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        var ex = Assert.Throws<VaxelTagHelperException>(() => tagHelper.Process(context, output));
+        Assert.Contains("Rule R2", ex.Message);
     }
 
     [Fact]

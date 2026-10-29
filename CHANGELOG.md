@@ -2,6 +2,20 @@
 
 The specification is versioned because it is the contract. Every entry says what changed **and why it was wrong**, because a spec that quietly improves teaches nobody.
 
+## v2.0 (in progress)
+
+### `v2.0-expressions` (P1) — closed expression interpreter & render-time schema validation
+
+- **Rule R2 amended: attribute values are data, or pure expressions over signals; never code.** In 1.x, R2 forbade all operators in binding attributes, forcing display facts like `tabs.length > 1`, `name == '' || saving`, or `"Showing @{ count } rows"` through either a server round trip or a redundant boolean signal. `v2.0-expressions` embeds a closed AST interpreter (lifted from Centralen's expression engine) in the client bundle and a matching C# Pratt parser and schema type-checker in `Vaxel.AspNetCore`. Because the interpreter walks a finite AST over the signal bag and a 20-function pure whitelist — with zero `eval`, zero `new Function`, own-property lookup blocking `__proto__`/`constructor`/`prototype`, and 512-char / 32-depth caps — it keeps the `script-src 'self'` / no-`unsafe-eval` guarantee intact. *(docs/01 § R2, docs/04 § Signal bindings, docs/06 § Content Security Policy)*
+- **Render-time validation against `AddSignalSchema<T>()` (and graceful degradation without one).** `VxBindTagHelper` parses expressions at render time and throws `VaxelTagHelperException` with the offending character span on syntax errors, unknown functions, length/depth cap violations, or forbidden target attributes (`href`, `src`, `action`, `formaction`, `style`, `on*`). When a signal schema is registered, it also checks signal existence and static operand/return types (`number | string | bool | list | object | null | any`), failing typos and type mismatches (`vx-show="tabs > 1"` where `Tabs` is a list) at build/render time rather than in the user's browser. Evaluation refusals in boolean bindings fail closed (`false`) and emit `vx:error`. *(docs/05 § Tag Helpers, docs/06 § Security)*
+- **312-case shared conformance corpus (DivKit Apache-2.0 provenance + Centralen + vaxel security cases).** Both the shipped JS engine (in jsdom) and the C# validator run against `conformance/expressions/`, asserting byte-for-byte canonical S-expression AST equality and matching static refusal codes. *(parity/SCOREBOARD.md)*
+
+### `v2.0-signals-core` (P0) — auto-tracking signal store
+
+- **Auto-tracking `Signal` and `EffectScope` replace the 1.x key-subscription store.** Lifted from Centralen's `runtime/signals.ts`. Each `vx-*` binding now runs inside an auto-tracking `effect` that records the signals it read and re-runs only when one of them changes (`!==`). The 1.x store required manual per-key subscriptions and could not track multi-signal reads needed by v2.0 expressions without maintaining a separate dependency graph. *(docs/02 § Signals)*
+- **Private scheduling queue and re-entrancy guarantees.** Signal writes and `patchSignals` enqueue subscribers into a private de-duplicating set guarded by a write-depth counter rather than invoking callbacks synchronously during a write. A multi-key patch runs an effect reading all of those keys once against the completed bag (never against a half-applied bag); diamond paths run once; self-writes settle without recursion; and an effect cycle aborts at 100 passes with a `vx:error`. *(docs/02 § Signals, docs/04 § One owner per property)*
+- **Null/absence semantics pinned (delete-on-null) and `window.Vaxel` shim preserved.** Setting or patching a signal to `null`/`undefined` deletes the key from the store, removes it from `vx-persist`/`vx-persist-session` and `vx-url-sync`, and omits it from `VX-Signals` so `[FromSignals]` binds the server default. `window.Vaxel` (`get=peek`, `set`, `patch`, `all`, `subscribe`) remains supported. *(docs/04 § Signal state, docs/06 § Output encoding)*
+
 ## v1.1.0 — 2026-10-28 · bug fixes
 
 No wire shape changed; the protocol stays at `VX-Protocol: 1`.

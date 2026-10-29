@@ -1,8 +1,8 @@
 # Recipe 01 — Search as you type, with suggestions
 
-**What the user does:** types in a box; a list of suggestions appears under it after they pause; arrow keys and Enter work; the browser's back button still does the right thing; with JavaScript off, pressing Enter searches.
+**What the user does:** types in a box; a minimum-length hint appears instantly for a 1-character query; a list of suggestions appears under it after they pause; arrow keys and Enter work; the browser's back button still does the right thing; with JavaScript off, pressing Enter searches.
 
-**What is client-side:** debouncing the keystrokes, sending the request, morphing the result list in, showing a spinner. Nothing else. The matching, ranking, highlighting and empty-state wording are all C#.
+**What is client-side:** debouncing the keystrokes, instant display expressions over the `q` and `searching` signals (`len(trim(q))`, disabling the submit button while empty or in flight), sending the request, morphing the result list in, showing a spinner. The matching, ranking, highlighting and empty-state wording are all C#.
 
 ---
 
@@ -11,14 +11,18 @@
 ```html
 @* Pages/Search/Index.cshtml *@
 <form id="search-form" method="get" asp-page="/Search/Index" vx-get vx-target="#results"
-      vx-on="input" vx-debounce="200" vx-indicator="searching" vx-url-sync="q">
+      vx-on="input" vx-debounce="200" vx-indicator="searching" vx-url-sync="q"
+      vx-signals='@Json.Serialize(new { q = Model.Query, searching = false, count = Model.Suggestions.Count })'>
   <label for="q">Search customers</label>
   <input id="q" name="q" type="search" value="@Model.Query"
-         autocomplete="off" role="combobox" aria-expanded="@(Model.HasResults ? "true" : "false")"
+         autocomplete="off" role="combobox"
+         aria-expanded="@(Model.Suggestions.Count > 0 ? "true" : "false")"
+         vx-attr:aria-expanded="count > 0 ? 'true' : 'false'"
          aria-controls="results" vx-bind="q" />
 
   <span vx-show="searching" aria-hidden="true" class="spinner"></span>
-  <button type="submit">Search</button>
+  <small vx-show="len(trim(q)) == 1" class="hint">Type at least 2 characters…</small>
+  <button type="submit" vx-attr:disabled="len(trim(q)) < 2 || searching">Search</button>
 </form>
 
 <div id="results" vx-region role="listbox" aria-label="Suggestions">
@@ -28,7 +32,9 @@
 
 Read what that says: it is a **real GET form**. Without the agent, Enter submits it and the page renders with results — that is the R3 invariant paying for itself. With the agent, `vx-on="input"` plus `vx-debounce="200"` turns each pause into a request whose response replaces `#results` only.
 
-`vx-indicator="searching"` sets a *signal*, so the spinner is `vx-show="searching"` and could equally be a disabled button elsewhere on the page. `vx-url-sync="q"` keeps `?q=` in the address bar without a history entry per keystroke — so a reload, a share or a bookmark all reproduce the screen.
+Because bindings accept closed expressions over signals (Rule R2), the view derives `len(trim(q)) == 1`, `len(trim(q)) < 2 || searching`, and `count > 0 ? 'true' : 'false'` directly on the client without needing the server to mint separate boolean signals (`hasResults`, `isTooShort`, `canSubmit`). And when `AddSignalSchema<SearchSignals>()` is registered, `VxBindTagHelper` type-checks those expressions at render time.
+
+`vx-indicator="searching"` sets a *signal*, so the spinner is `vx-show="searching"` and the submit button is `vx-attr:disabled="len(trim(q)) < 2 || searching"`. `vx-url-sync="q"` keeps `?q=` in the address bar without a history entry per keystroke — so a reload, a share or a bookmark all reproduce the screen.
 
 ## The partial
 
@@ -67,7 +73,6 @@ public sealed class IndexModel : PageModel
 
     public string Query { get; private set; } = "";
     public IReadOnlyList<SuggestionVm> Suggestions { get; private set; } = [];
-    public bool HasResults => Suggestions.Count > 0;
 
     public async Task<IResult> OnGetAsync(string? q, CancellationToken ct)
     {
@@ -78,7 +83,7 @@ public sealed class IndexModel : PageModel
             page:  () => Page(),
             patch: async () => Patch.Ok()
                 .Replace("#results", await _fragments.PartialAsync("_Suggestions", Suggestions))
-                .Signals(new { hasResults = HasResults })
+                .Signals(new { count = Suggestions.Count })
                 .Announce(Suggestions.Count switch
                 {
                     0 => "No suggestions",
@@ -100,7 +105,7 @@ GET /Search?q=acme%20no
 VX-Request: 1
 VX-Target: #results
 VX-Sequence: 12
-VX-Signals: {"q":"acme no","searching":true}
+VX-Signals: {"q":"acme no","searching":true,"count":0}
 ```
 
 The query string carries `q` because `vx-url-sync` put it there — it is shareable state. The signal bag rides in a header, so it never becomes part of the cache key.
@@ -113,7 +118,7 @@ Response:
     <ul><li role="option" id="opt-c_18"><a …><mark>Acme No</mark>rdics AB</a>…</li>…</ul>
   </div>
 </vx-patch>
-<vx-signals>{"hasResults":true}</vx-signals>
+<vx-signals>{"count":6}</vx-signals>
 <vx-directive announce="6 suggestions" />
 ```
 
@@ -144,7 +149,7 @@ This is the framework's philosophy in one example: the *transport* is declarativ
 | Case | Behaviour |
 |---|---|
 | Fast typist outruns the network | `vx-debounce` coalesces; `vx-sync="replace"` (the default) aborts the in-flight request; `VX-Sequence` discards any stale response that still arrives |
-| User clears the box | `q` is empty → server returns the empty-state partial. No special-casing on the client |
+| User clears the box | `q` is empty → client disables the submit button immediately and server returns the empty-state partial |
 | Server 500 | `vx:error` fires, the region is left alone, the agent falls back to native form submission if the trigger was the submit button |
 | JavaScript disabled | The form submits, the page renders with results |
 | Screen reader | `announce` posts the result count to the polite live region; focus never moves while typing |
@@ -159,7 +164,7 @@ public async Task Suggestions_patch_only_the_results_region()
 
     patch.ShouldHaveStatus(200)
          .ShouldPatch("#results").WithMode(SwapMode.Morph).ContainingElement("[role=option]");
-    patch.ShouldSetSignal("hasResults", true);
+    patch.ShouldSetSignal("count", 6);
     patch.ShouldNotPatch("#search-form");        // the input must never be re-rendered under the user
 }
 

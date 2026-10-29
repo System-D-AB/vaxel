@@ -1,0 +1,9 @@
+[
+  { "name": "vaxel_proto_guard_dunder_proto", "expression": "@{user.__proto__}", "state": { "user": { "name": "Alice" } }, "expect": { "ok": true, "value": null } },
+  { "name": "vaxel_proto_guard_constructor", "expression": "@{user.constructor}", "state": { "user": { "name": "Alice" } }, "expect": { "ok": true, "value": null } },
+  { "name": "vaxel_proto_guard_prototype", "expression": "@{user.prototype}", "state": { "user": { "name": "Alice" } }, "expect": { "ok": true, "value": null } },
+  { "name": "vaxel_array_length_gt_one", "expression": "@{tabs.length > 1}", "state": { "tabs": ["overview", "details"] }, "expect": { "ok": true, "value": true } },
+  { "name": "vaxel_err_unknown_field", "expression": "@{undeclared_signal + 1}", "state": { "count": 5 }, "expect": { "ok": false, "code": "expressions.unknown_field" } },
+  { "name": "vaxel_err_cap_depth_exceeded", "expression": "@{(((((((((((((((((((((((((((((((((1)))))))))))))))))))))))))))))))))}", "state": {}, "expect": { "ok": false, "code": "expressions.syntax" } },
+  { "name": "vaxel_err_cap_length_exceeded", "expression": "@{'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'}", "state": {}, "expect": { "ok": false, "code": "expressions.syntax" } }
+]

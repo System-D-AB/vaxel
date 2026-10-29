@@ -26,6 +26,7 @@ Suite last run:     dotnet test
 | Attribute plugins at Outcome parity | **4 / 17** | **4 / 17** |
 | Pro attributes matched | **9 / 10** | **7 / 10** in the 1.0 agent (2 ⬜ await v1.1-triggers; 1 Partial: `on-resize`) |
 | Actions matched | **4 / 4** | **2 Full + 2 Outcome-via-`vx-signals`** in the 1.0 agent |
+| Expressions corpus (client eval + server AST/type parity) | **312 / 312** | **312 / 312** (305 lifted + 7 vaxel additions; 0 failing) |
 | Example corpus expressible | **100 %** | pending re-score against the honest 1.0 vocabulary |
 
 ## Datastar SDK conformance (`sdk/test`, 20 cases)
@@ -109,6 +110,7 @@ Tests that exist because of decisions Datastar did not make. No upstream equival
 |---|---|---|
 | Page-parity harness (R3) | every region | ✅ 100 % covered |
 | Strict-CSP suite (zero violations, no `eval`/`Function` shipped) | 100 % | ✅ 100 % (zero eval) |
+| Closed expressions corpus (DivKit + Centralen + vaxel, JS eval & C# AST/type parity) | 312 / 312 | ✅ 312 / 312 |
 | Morph: dirty input, caret, selection, IME | full fixture set | ✅ verified |
 | Accessibility: focus, `aria-busy`, live region, no focus theft on push | full fixture set | ✅ verified |
 

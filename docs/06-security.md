@@ -12,9 +12,13 @@ Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'
 
 No `unsafe-eval`, no `unsafe-inline`, no nonces required for the framework's own operation.
 
-This is achievable because of R2: **no attribute value is ever evaluated.** The agent contains no `eval`, no `new Function`, no `setTimeout(string)`, no `innerHTML` assignment from a string that did not come from the server's own parsed document. A conformance test greps the shipped bundle for those constructs and fails the build.
+This is achievable because of R2: **no attribute value is ever evaluated as JavaScript.** The agent contains no `eval`, no `new Function`, no `setTimeout(string)`, no `innerHTML` assignment from a string that did not come from the server's own parsed document. Expressions in `vx-show`, `vx-text`, `vx-class:*`, and `vx-attr:*` run through a closed, linear-time AST interpreter over the signal bag and a 20-function pure whitelist. A conformance test greps the shipped bundle for `eval`/`Function` constructs and fails the build.
 
-Consequences the framework accepts to keep this: no expression language, no inline event handlers, no `javascript:` URLs, no dynamic script injection, no `style` attributes generated from user input.
+Consequences and guards the framework enforces to keep this:
+- **Refused bound attributes:** `VxBindTagHelper` refuses `vx-attr:href`, `vx-attr:src`, `vx-attr:action`, `vx-attr:formaction`, `vx-attr:style`, and any `vx-attr:on*` at render time with `VaxelTagHelperException`.
+- **Prototype-chain isolation:** member access (`a.b`) uses `Object.prototype.hasOwnProperty` and explicitly yields `null` for `__proto__`, `constructor`, and `prototype`.
+- **Fail-closed boolean bindings:** any evaluation refusal (`expressions.*`) in `vx-show`, `vx-class:*`, or boolean `vx-attr:*` evaluates to `false` (hiding or disabling, never silently enabling) and emits `vx:error`.
+- **No `vx-html`:** `vx-text` sets `textContent` only; there is no `vx-html`, no inline event handlers, no `javascript:` URLs, and no dynamic script injection.
 
 ## Antiforgery
 
@@ -40,7 +44,7 @@ A framework cannot prevent an application from writing `if (signals.IsAdmin)`. I
 
 Rendering is Razor's, so encoding is Razor's: `@value` encodes, `@Html.Raw` does not, and the framework adds nothing that bypasses either. Two specific obligations:
 
-- **Signal seeds** (`vx-signals='{…}'`) are JSON serialised then HTML-attribute-encoded. The serialiser must escape `<`, `>`, `&` and quotes so a value containing `</script>` or `"` cannot break out of the attribute.
+- **Signal seeds** (`vx-signals='{…}'`) are JSON serialised then HTML-attribute-encoded. The serialiser must escape `<`, `>`, `&` and quotes so a value containing `</script>` or `"` cannot break out of the attribute. Setting a signal to `null` or `undefined` deletes the key from the store, storage, URL sync, and the `VX-Signals` wire bag. `vx-text` sets `textContent` only — never `innerHTML` ( there is no `vx-html`).
 - **Patch documents** are parsed with the browser's own HTML parser into an inert document before being morphed. Script elements arriving in a patch are **not** executed by default; an application that deliberately wants a script in a fragment must opt in per response, and the docs must explain why that is usually the wrong instinct.
 
 ## Redirects
@@ -59,6 +63,7 @@ The `redirect` directive performs a full navigation. The agent accepts only same
 | Limit | Default | Why |
 |---|---|---|
 | Signal bag size | 8 KB | Beyond this the agent omits signals and flags it; endpoints treat signals as optional anyway |
+| Expression length / depth | 512 chars / 32 levels | Refused at render time and ignored at runtime with `vx:error`; evaluation is linear in expression size |
 | Patch document size | application's response limits | No framework-specific cap; it is ordinary HTML |
 | `vx-poll` minimum interval | 1 s | Prevents an accidental request storm from a typo |
 | SSE streams per identity | 4 | A user with several tabs is normal; a script opening hundreds is not |
