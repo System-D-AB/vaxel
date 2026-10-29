@@ -142,6 +142,7 @@ A Tag Helper claims every `vx-*` attribute the 1.0 agent implements:
 | Attribute(s) | Tag Helper |
 |---|---|
 | `vx-get` `vx-post` `vx-put` `vx-patch` `vx-delete` | `VxTriggerTagHelper` |
+| `vx-on` | `VxOnTagHelper` (chain grammar, literal args, `filter`/`set` AST & schema validation) |
 | `vx-target` | `VxTargetTagHelper` |
 | `vx-region` | `VxRegionTagHelper` |
 | `vx-indicator` `vx-disable` | `VxIndicatorTagHelper` |
@@ -152,16 +153,16 @@ A Tag Helper claims every `vx-*` attribute the 1.0 agent implements:
 | `vx-confirm` `vx-preserve` `vx-sse` | `VxConfirmTagHelper` / `VxPreserveTagHelper` / `VxSseTagHelper` |
 | `vaxel-antiforgery` | `VaxelAntiforgeryTagHelper` |
 
-**What a view still writes raw.** `vx-sync`, `vx-encoding`, `vx-style:*`, `vx-url-sync`, `vx-preserve-attr` and `vx-overwrite-dirty` are implemented by the agent but have no dedicated Tag Helper yet; write them as plain attributes. Everything marked ⬜ *not in 1.0* in [04](04-client-attributes.md) — the trigger modifiers, `vx-on`, `vx-match-media`, `vx-signal-set`, `vx-transition-name`, `vx-ignore`, the `vx-bind-*` modifiers — is inert in the 1.0 bundle and has no Tag Helper; it arrives with `v1.1-triggers`.
+**What a view still writes raw.** `vx-sync`, `vx-encoding`, `vx-style:*`, `vx-url-sync`, `vx-preserve-attr` and `vx-overwrite-dirty` are implemented by the agent but have no dedicated Tag Helper yet; write them as plain attributes.
 
-An optional **signal schema** registers names and types so bindings and expressions are type-checked at render time (and a strongly-typed record can be bound via `[FromSignals]`):
+An optional **signal schema** registers names and types so bindings, `vx-on` `filter` predicates, and `vx-on` `set` sinks are type-checked at render time (and a strongly-typed record can be bound via `[FromSignals]`):
 
 ```csharp
-builder.Services.AddVaxel().AddSignalSchema<ShellSignals>();
+builder.Services.AddVaxel(o => o.SignalSchema = new SignalSchema<ShellSignals>());
 ```
 
-- **With `AddSignalSchema<T>()` registered:** `VxBindTagHelper` validates syntax, the 20-function whitelist, length/depth caps, signal existence, and static operand/return types (`number | string | bool | list | object | null | any`), throwing `VaxelTagHelperException` with the offending character span on any mismatch (e.g., `vx-show="tabs > 1"` where `Tabs` is a list, or a reference to an undeclared signal).
-- **Without a signal schema registered:** `VxBindTagHelper` still validates syntax, the function whitelist, forbidden attributes, and the length/depth caps (treating signal types as `any`) — degrading gracefully to less than full schema typing while still catching syntax and whitelist mistakes before deploy.
+- **With a signal schema registered:** `VxBindTagHelper` and `VxOnTagHelper` validate syntax, the 20-function whitelist, length/depth caps, signal existence, and static operand/return types (`number | string | bool | list | object | null | any`), throwing `VaxelTagHelperException` with the offending character span on any mismatch (e.g., `vx-show="tabs > 1"` where `Tabs` is a list, or a reference to an undeclared signal). In `VxOnTagHelper`, `filter` and `set` expressions additionally have access to the typed event properties `key` (`string`), `value` (`string`), and `checked` (`bool`).
+- **Without a signal schema registered:** `VxBindTagHelper` and `VxOnTagHelper` still validate syntax, the function whitelist, forbidden attributes, operator/sink structure, and the length/depth caps (treating user signal types as `any`) — degrading gracefully to less than full schema typing while still catching syntax and whitelist mistakes before deploy.
 - **No server evaluation:** the server parses and type-checks only; expression values are computed in exactly one place, the client agent.
 
 ## Pushing from the server
@@ -169,7 +170,10 @@ builder.Services.AddVaxel().AddSignalSchema<ShellSignals>();
 ```csharp
 public interface IPushChannel
 {
-    Task PushAsync(PushScope scope, PatchDocument document, CancellationToken ct = default);
+    IPushPipeline<T> From<T>(IAsyncEnumerable<T> source, IVaxelScheduler? scheduler = null);
+    Task PushAsync(PushScope scope, PatchBuilder patch, CancellationToken ct = default);
+    Task PushAsync(PushScope scope, string rawPatchHtml, CancellationToken ct = default);
+    Task PushReloadAsync(PushScope scope, CancellationToken ct = default);
 }
 
 await push.PushAsync(PushScope.User(userId),
@@ -177,6 +181,34 @@ await push.PushAsync(PushScope.User(userId),
 ```
 
 `PushScope` is `User`, `Group` or `Broadcast`. The default transport is in-process (one node); an abstraction point (`IPushBackplane`) allows Redis, Postgres `LISTEN/NOTIFY` or a service bus without changing calling code. Scale-out without a backplane is a documented limitation, not a silent one.
+
+### Push pipelines (`push.From(source)`)
+
+A server-side `IAsyncEnumerable<T>` source can be composed into scoped SSE pushes using the same operator vocabulary and marble semantics as client `vx-on` chains:
+
+```csharp
+await push.From(store.Watch(db, box, indexName))
+    .DistinctUntilChanged(s => s.State)
+    .Throttle(TimeSpan.FromSeconds(1))
+    .Select(async (s, composer, ct) =>
+        Patch.Ok().Replace($"#ix-{s.Name}", await composer.PartialAsync("_StateBadge", s)))
+    .To(PushScope.User(userId), ct);
+```
+
+- **Operators (`IPushPipeline<T>`):** `Debounce(window)`, `Throttle(window)`, `Delay(duration)`, `Once()`, `Sample(interval)`, `Buffer(window)`, `DistinctUntilChanged([keySelector])`, `Where(predicate)`, `Merge(others)`, `TakeUntil(stopSignal | stopToken)`, and `Select(...)`, terminating in `.To(scope, ct)`.
+- **Hand-rolled on `IAsyncEnumerable<T>` + `IVaxelScheduler` (no Rx.NET):** time operators run against `IVaxelScheduler` (`SystemScheduler` in production, `VirtualScheduler` in marble tests) so `Vaxel.AspNetCore` keeps zero third-party package dependencies.
+- **Per-recipient rendering (`BackgroundHttpContext`):** when `.To(scope, ct)` emits an item, the `.Select(...)` patch factory runs **once per connected recipient** inside its own `BackgroundHttpContext` scope (never rendering a single privileged view and fanning the HTML out). Touching request-coupled state (`HttpContext.User`, `Url.Page`) inside a background render throws `VaxelFragmentContextException` naming the property.
+- **Lifetime and fault isolation:**
+  - When a single-user recipient (`PushScope.User(id)`) closes their SSE connection, or when any scope has zero active connections for `VaxelPushOptions.IdleStopPeriod` (default `30s`), the pipeline cancels its source enumeration and disposes the underlying subscription.
+  - If a source throws, the fault is wrapped in `VaxelPushPipelineException` (and reported to `VaxelPushOptions.OnPipelineError`), stopping only that pipeline without affecting other pipelines or HTTP requests.
+
+### `Bus<T>` (in-process subject with backplane fan-out)
+
+`Bus<T>` (`IBus<T>`) is a server-wide typed message subject so handlers can publish events (`bus.Publish(evt)`) without knowing which pipelines are watching (`push.From(bus.Subscribe(ct))`):
+
+- **Bounded per-subscriber channels:** each subscriber gets a bounded `Channel<T>` (default capacity `64`) with a documented overflow policy (`BusDropPolicy.DropOldest` by default so live boards always render the newest state).
+- **Zero-subscriber drop:** when `SubscriberCount == 0`, `Publish` drops events immediately with zero buffering.
+- **Multi-node via `IPushBackplane`:** when a backplane is registered, published events propagate across nodes on `IPushBackplane` while deduplicating by node ID so local subscribers never receive a message twice.
 
 ## Hosting notes
 

@@ -27,7 +27,7 @@ Suite last run:     dotnet test
 | Pro attributes matched | **9 / 10** | **7 / 10** in the shipped agent (2 ⬜ `vx-match-media`, `vx-transition-name`; 1 Partial: `on-resize`) |
 | Actions matched | **4 / 4** | **4 / 4** (`fetch`, `peek`, and `set` sink in `vx-on` / `<vx-signals>`) |
 | Expressions corpus (client eval + server AST/type parity) | **312 / 312** | **312 / 312** (305 lifted + 7 vaxel additions; 0 failing) |
-| Trigger operators (`vx-on` marble & stream suite) | **5 / 5** | **5 / 5** (`debounce`, `throttle`, `delay`, `once`, `distinct`; 0 failing) |
+| Stream operators (shared marble corpus: client `vx-on` + server `IPushPipeline<T>`) | **5 / 5** | **5 / 5** (`debounce`, `throttle`, `delay`, `once`, `distinct` pass on both client and server) |
 | Example corpus expressible | **100 %** | pending re-score against the honest 1.0 vocabulary |
 
 ## Datastar SDK conformance (`sdk/test`, 20 cases)
@@ -79,20 +79,23 @@ Suite last run:     dotnet test
 | `style` | `vx-style:<p>` | ✅ Full | ✅ Full |
 | `text` | `vx-text` | ✅ Full | ✅ Full |
 
-## Operators (`vx-on` marble & stream conformance)
+## Operators (shared marble & stream conformance: client `vx-on` + server `IPushPipeline<T>`)
 
-| Operator | Marble fixture / suite | Client (`vaxel.js`) | Server (`VxOnTagHelper`) |
+| Operator | Marble fixture / suite | Client (`vaxel.js`) | Server (`IPushPipeline<T>` + `VxOnTagHelper`) |
 |---|---|---|---|
-| `debounce <ms>` | `conformance/marbles/debounce.json` (`a-b-c----\|` → `------c--\|`) | ✅ Pass | ✅ Validated |
-| `throttle <ms>` | `conformance/marbles/throttle.json` (`abc---def\|` → `a-c---d-f\|`) | ✅ Pass | ✅ Validated |
-| `delay <ms>` | `conformance/marbles/delay.json` (`a-b---c--\|` → `--a-b---c\|`) | ✅ Pass | ✅ Validated |
-| `once` | `conformance/marbles/once.json` (`a-b-c----\|` → `a--------\|`) | ✅ Pass | ✅ Validated |
-| `distinct` | `conformance/marbles/distinct.json` (`a-a-b-b-a\|` → `a---b---a\|`) | ✅ Pass | ✅ Validated |
-| `key <KeyName>` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated |
-| `filter <expr>` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated (AST + schema) |
-| `prevent` / `stop` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated |
-| `set <ident> = <expr>` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated (AST + schema) |
-| `takeUntil` (morph disposal) | `conformance/marbles/run.mjs` (`us3-takeUntil-morph` + `1000-cycles`) | ✅ Pass | — |
+| `debounce` / `Debounce` | `conformance/marbles/debounce.json` (`ab---c---\|` → `---b---c-\|`) | ✅ Pass | ✅ Pass (`VirtualScheduler`) |
+| `throttle` / `Throttle` | `conformance/marbles/throttle.json` (`ab-c-d---\|` → `a--c-d---\|`) | ✅ Pass | ✅ Pass (`VirtualScheduler`) |
+| `delay` / `Delay` | `conformance/marbles/delay.json` (`a-b------\|` → `--a-b----\|`) | ✅ Pass | ✅ Pass (`VirtualScheduler`) |
+| `once` / `Once` | `conformance/marbles/once.json` (`-a-b-c---\|` → `-a-------\|`) | ✅ Pass | ✅ Pass (`VirtualScheduler`) |
+| `distinct` / `DistinctUntilChanged` | `conformance/marbles/distinct.json` (`a-a-b-b-a\|` → `a---b---a\|`) | ✅ Pass | ✅ Pass (`VirtualScheduler`) |
+| `filter` / `Where` + `Select` | `conformance/marbles/run.mjs` & `ServerMarbleConformanceTests` | ✅ Pass | ✅ Pass (per-recipient `Select`) |
+| `takeUntil` / `TakeUntil` | `conformance/marbles/run.mjs` (morph) & `ServerMarbleConformanceTests` (stop signal / disconnect / idle) | ✅ Pass | ✅ Pass |
+| `Sample` | `ServerMarbleConformanceTests` | *(server-only)* | ✅ Pass (`VirtualScheduler`) |
+| `Buffer` | `ServerMarbleConformanceTests` | *(server-only)* | ✅ Pass (`VirtualScheduler`) |
+| `Merge` | `ServerMarbleConformanceTests` | *(server-only)* | ✅ Pass (`VirtualScheduler`) |
+| `key <KeyName>` | `conformance/marbles/run.mjs` | ✅ Pass | *(client-only; validated by `VxOnTagHelper`)* |
+| `prevent` / `stop` | `conformance/marbles/run.mjs` | ✅ Pass | *(client-only; validated by `VxOnTagHelper`)* |
+| `set <ident> = <expr>` | `conformance/marbles/run.mjs` | ✅ Pass | *(client-only; validated by `VxOnTagHelper`)* |
 
 ## Pro attributes (10)
 

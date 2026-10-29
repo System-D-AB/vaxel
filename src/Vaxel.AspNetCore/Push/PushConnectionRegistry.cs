@@ -30,6 +30,8 @@ public sealed class PushConnectionRegistry
         backplane.Subscribe(DispatchToLocalAsync);
     }
 
+    public event Action? ConnectionsChanged;
+
     public bool TryAddConnection(PushConnection connection, out string? error)
     {
         error = null;
@@ -44,18 +46,61 @@ public sealed class PushConnectionRegistry
             }
         }
 
-        return _connections.TryAdd(connection.ConnectionId, connection);
+        var added = _connections.TryAdd(connection.ConnectionId, connection);
+        if (added)
+        {
+            ConnectionsChanged?.Invoke();
+        }
+
+        return added;
     }
 
     public void RemoveConnection(string connectionId)
     {
-        _connections.TryRemove(connectionId, out _);
+        if (_connections.TryRemove(connectionId, out _))
+        {
+            ConnectionsChanged?.Invoke();
+        }
     }
 
     public int TotalConnections => _connections.Count;
 
+    public IReadOnlyList<PushConnection> GetConnections(PushScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        var list = new List<PushConnection>();
+        foreach (var conn in _connections.Values)
+        {
+            if (MatchesScope(conn, scope))
+            {
+                list.Add(conn);
+            }
+        }
+
+        return list;
+    }
+
+    public bool HasConnections(PushScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        foreach (var conn in _connections.Values)
+        {
+            if (MatchesScope(conn, scope))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private Task DispatchToLocalAsync(PushScope scope, string eventName, string data)
     {
+        if (eventName.StartsWith("vx-bus:", StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
         var msg = new PushMessage(eventName, data);
 
         foreach (var conn in _connections.Values)
@@ -69,7 +114,7 @@ public sealed class PushConnectionRegistry
         return Task.CompletedTask;
     }
 
-    private static bool MatchesScope(PushConnection conn, PushScope scope) => scope switch
+    public static bool MatchesScope(PushConnection conn, PushScope scope) => scope switch
     {
         PushScope.BroadcastScope => true,
         PushScope.UserScope user => string.Equals(conn.UserId, user.UserId, StringComparison.Ordinal),

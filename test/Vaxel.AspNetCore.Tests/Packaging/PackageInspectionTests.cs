@@ -88,4 +88,22 @@ public sealed class PackageInspectionTests
         var analyzerEntry = zip.Entries.FirstOrDefault(e => e.FullName.StartsWith("analyzers/dotnet/cs/Vaxel.Analyzers.dll", StringComparison.OrdinalIgnoreCase));
         Assert.NotNull(analyzerEntry);
     }
+
+    [Fact]
+    public void PackageGraph_ContainsNoRxNet()
+    {
+        var referencedAssemblies = typeof(global::Vaxel.IPushChannel).Assembly
+            .GetReferencedAssemblies()
+            .Select(a => a.Name ?? string.Empty)
+            .ToArray();
+
+        Assert.DoesNotContain(referencedAssemblies, name =>
+            name.Contains("System.Reactive", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Rx", StringComparison.OrdinalIgnoreCase));
+
+        var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var csprojPath = Path.Combine(repoRoot, "src", "Vaxel.AspNetCore", "Vaxel.AspNetCore.csproj");
+        var csprojContent = File.ReadAllText(csprojPath);
+        Assert.DoesNotContain("System.Reactive", csprojContent, StringComparison.OrdinalIgnoreCase);
+    }
 }

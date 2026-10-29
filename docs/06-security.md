@@ -55,7 +55,7 @@ The `redirect` directive performs a full navigation. The agent accepts only same
 
 - The stream endpoint authenticates and authorises like any other endpoint; a connection is not a bypass.
 - `PushScope` is resolved server-side from the connection's identity — a client cannot ask to join another user's scope.
-- A push carries rendered HTML for *that* recipient; the framework never broadcasts one rendering of a fragment to scopes with different permissions. The API shape (`PushAsync(scope, document)`) makes the per-scope rendering explicit rather than incidental.
+- A push carries rendered HTML for *that* recipient; the framework never broadcasts one rendering of a fragment to scopes with different permissions. Both `PushAsync(scope, document)` and `push.From(source).Select(...).To(scope, ct)` enforce per-recipient rendering: in a push pipeline, the `.Select(...)` factory executes **once per connected recipient** inside a fresh `BackgroundHttpContext` scope (where accidental access to ambient `HttpContext.User` or `Url.Page` throws `VaxelFragmentContextException`).
 - Streams are capped per identity (configurable) so a client cannot exhaust connections by opening documents.
 
 ## Denial of service and limits
@@ -65,7 +65,9 @@ The `redirect` directive performs a full navigation. The agent accepts only same
 | Signal bag size | 8 KB | Beyond this the agent omits signals and flags it; endpoints treat signals as optional anyway |
 | Expression length / depth | 512 chars / 32 levels | Refused at render time and ignored at runtime with `vx:error`; evaluation is linear in expression size |
 | Patch document size | application's response limits | No framework-specific cap; it is ordinary HTML |
-| `vx-poll` minimum interval | 1 s | Prevents an accidental request storm from a typo |
+| `vx-on="interval …"` minimum | 1 s (1000 ms floor) | Prevents an accidental request storm from a typo |
+| `Bus<T>` subscriber queue | 64 items (`DropOldest`) | Prevents a slow subscriber or zero-subscriber bus from growing unboundedly in memory |
+| Push pipeline idle timeout | 30 s (`IdleStopPeriod`) | Stops a pipeline whose scope has zero active SSE connections so abandoned watches do not run forever |
 | SSE streams per identity | 4 | A user with several tabs is normal; a script opening hundreds is not |
 | Reconnect backoff | jittered, capped | A restarting server must not be thundering-herded |
 

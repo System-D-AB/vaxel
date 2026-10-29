@@ -91,7 +91,22 @@ await push.PushAsync(PushScope.User(job.RequestedBy),
 
 No polling, no client job-state machine, no websocket. If the connection was dropped when the job finished, the panel is stale — and the fix is the invariant: `#report-panel` is also reachable as a page, so a refresh shows the truth.
 
-**When SSE is unavailable** (a proxy that will not stream, a corporate middlebox): degrade to `vx-poll` on the region, at a sane interval. The server code does not change, because the pending partial is the same partial.
+**When SSE is unavailable** (a proxy that will not stream, a corporate middlebox): degrade to `vx-on="interval 5000"` on the region, at a sane interval. The server code does not change, because the pending partial is the same partial.
+
+## Composing continuous sources with `push.From(...)`
+
+When updates arrive as a continuous `IAsyncEnumerable<T>` — a database change stream, a `ChannelReader<T>`, or an in-process `IBus<T>` — compose the stream with `push.From(source)` instead of writing manual loops and timers:
+
+```csharp
+await push.From(jobs.WatchProgressAsync(jobId, ct))
+    .DistinctUntilChanged(p => (p.Stage, p.Percent))
+    .Throttle(TimeSpan.FromSeconds(1))
+    .Select(async (progress, recipient, composer, token) => Patch.Ok()
+        .Morph("#report-panel", await composer.PartialAsync("_ReportProgress", progress)))
+    .To(PushScope.User(job.RequestedBy), ct);
+```
+
+`DistinctUntilChanged` and `Throttle` coalesce high-frequency progress ticks before touching Razor; `.Select(...)` runs per recipient inside a `BackgroundHttpContext` scope; and `.To(...)` automatically cancels the upstream `WatchProgressAsync` subscription if the recipient disconnects or if the scope stays empty past `IdleStopPeriod` (default 30 seconds).
 
 ## Rendering outside a request
 

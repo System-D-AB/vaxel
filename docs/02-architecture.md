@@ -107,6 +107,8 @@ Implementation is self-contained (~1 KB). Computed/derived signals are never exp
 
 One `EventSource` per document, opened by `vx-sse` on the shell. Frames carry the same patch document format as responses. Push is for change the user did not initiate: another user's action, a long-running job finishing, a queue count moving.
 
+On the server, `IPushChannel.From<T>(IAsyncEnumerable<T>)` composes a data stream or `Bus<T>` subscription through named time/stream operators (`Debounce`, `Throttle`, `Delay`, `Once`, `Sample`, `Buffer`, `DistinctUntilChanged`, `Where`, `Merge`, `TakeUntil`, `Select`) into `.To(scope, ct)` pushes. A pipeline is a **subscription over a source, never a server-side UI circuit** (R4): no per-user component tree is held between pushes, each emitted item is rendered per recipient inside a `BackgroundHttpContext` scope, and the pipeline disposes its source subscription automatically when the recipient disconnects or the scope sits idle past `IdleStopPeriod` (default 30 s).
+
 Constraints the spec imposes so this stays cheap: one channel per document (not per region); a heartbeat interval that survives proxy idle timeouts; reconnection with jittered backoff and a `Last-Event-ID` resume hint; and a documented expectation that hosts behind buffering proxies must disable response buffering for the stream route.
 
 ## Progressive enhancement

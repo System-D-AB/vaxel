@@ -29,6 +29,7 @@ builder.Services.AddVaxel(options =>
 {
     options.Push.HeartbeatSeconds = 1; // 1s heartbeat for faster test execution
 });
+builder.Services.AddVaxelBus<string>();
 
 var app = builder.Build();
 
@@ -80,6 +81,46 @@ app.MapPost("/cookbook/contact", (HttpContext http) =>
         patch: () => Patch.Ok()
             .Replace("#contact", new Microsoft.AspNetCore.Html.HtmlString("<p>Thank you!</p>"))
             .PushUrl("/thank-you")));
+
+var readyOrders = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>();
+
+static (string PreparingHtml, string ReadyHtml) RenderOrderBoardRegions(System.Collections.Concurrent.ConcurrentDictionary<string, bool> ready)
+{
+    var is104Ready = ready.ContainsKey("104");
+    var prepItems = is104Ready
+        ? "<li id=\"order_105\">#105 · Ramen</li>"
+        : "<li id=\"order_104\">#104 · Gyoza</li><li id=\"order_105\">#105 · Ramen</li>";
+    var readyItems = is104Ready
+        ? "<li id=\"order_104\">#104 · Gyoza</li>"
+        : "";
+    return (
+        $"<ul class=\"order-list\">{prepItems}</ul>",
+        $"<ul class=\"order-list\">{readyItems}</ul>");
+}
+
+app.MapGet("/cookbook/orders", (HttpContext http) =>
+{
+    var (prepHtml, readyHtml) = RenderOrderBoardRegions(readyOrders);
+    var pageHtml = $"<html><body vx-sse=\"/_vaxel/stream\"><section id=\"orders-preparing\" vx-region>{prepHtml}</section><section id=\"orders-ready\" vx-region>{readyHtml}</section></body></html>";
+    return global::Vaxel.Vaxel.PageOrPatch(http,
+        page: () => (IResult)Results.Content(pageHtml, "text/html"),
+        patch: () => Patch.Ok()
+            .Replace("#orders-preparing", new Microsoft.AspNetCore.Html.HtmlString(prepHtml))
+            .Replace("#orders-ready", new Microsoft.AspNetCore.Html.HtmlString(readyHtml)));
+});
+
+app.MapPost("/cookbook/orders/ready", (HttpContext http, string id, IBus<string> bus) =>
+{
+    readyOrders[id] = true;
+    bus.Publish(id);
+    var (prepHtml, readyHtml) = RenderOrderBoardRegions(readyOrders);
+    return global::Vaxel.Vaxel.PageOrPatch(http,
+        page: () => (IResult)Results.Redirect("/cookbook/orders"),
+        patch: () => Patch.Ok()
+            .Replace("#orders-preparing", new Microsoft.AspNetCore.Html.HtmlString(prepHtml))
+            .Replace("#orders-ready", new Microsoft.AspNetCore.Html.HtmlString(readyHtml))
+            .Announce($"Order {id} is ready"));
+});
 
 app.MapGet("/plain-route", () => Results.Text("plain text", "text/plain"));
 

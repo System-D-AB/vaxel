@@ -25,4 +25,6 @@ public sealed class VaxelPushOptions
     public bool AllowAnonymous { get; set; } = false;
     public string UserIdClaimType { get; set; } = System.Security.Claims.ClaimTypes.NameIdentifier;
     public string GroupIdClaimType { get; set; } = System.Security.Claims.ClaimTypes.Role;
+    public TimeSpan IdleStopPeriod { get; set; } = TimeSpan.FromSeconds(30);
+    public Action<PushScope, VaxelPushPipelineException>? OnPipelineError { get; set; }
 }
