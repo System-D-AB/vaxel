@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace Vaxel.Client.Tests;
@@ -12,19 +13,19 @@ namespace Vaxel.Client.Tests;
 /// </summary>
 public sealed class VocabularyHonestyTests
 {
-    // Attributes the 1.0 agent implements (present in vaxel.js).
+    // Attributes the agent implements (present in vaxel.js).
     private static readonly string[] ImplementedIn10 =
     [
         "vx-get", "vx-post", "vx-put", "vx-patch", "vx-delete",
-        "vx-on", "vx-target", "vx-vals-", "vx-confirm", "vx-indicator", "vx-disable",
+        "vx-on", "vx-target", "vx-vals-", "vx-confirm", "vx-indicator", "vx-disable", "vx-progress",
         "vx-sync", "vx-encoding",
         "vx-preserve", "vx-preserve-attr", "vx-overwrite-dirty", "vx-sse",
+        "vx-transition", "vx-transition-name",
         "vx-text", "vx-show", "vx-class:", "vx-attr:", "vx-style:", "vx-bind",
         "vx-signals", "vx-signals-if-missing", "vx-persist", "vx-persist-session", "vx-url-sync",
     ];
 
-    // Attributes documented in docs/04 but NOT in the 1.0 bundle. Marked "not in 1.0" in
-    // docs/04, the README and parity/SCOREBOARD.md. Implementing any is a later packet.
+    // Attributes documented in docs/04 but NOT in the bundle.
     private static readonly string[] NotIn10 =
     [
         "vx-swap", "vx-include",
@@ -32,7 +33,7 @@ public sealed class VocabularyHonestyTests
         "vx-prevent", "vx-stop", "vx-capture", "vx-passive",
         "vx-window", "vx-document", "vx-outside",
         "vx-trigger-load", "vx-trigger-load-delay", "vx-trigger-visible", "vx-poll",
-        "vx-ignore", "vx-ignore-self", "vx-transition-name",
+        "vx-ignore", "vx-ignore-self",
         "vx-bind-event", "vx-bind-prop", "vx-signal-set:", "vx-match-media:",
         "vx-debug-signals", "vx-url-sync-history",
     ];
@@ -68,7 +69,10 @@ public sealed class VocabularyHonestyTests
         var code = ReadBundle();
         foreach (var name in NotIn10)
         {
-            Assert.False(code.Contains(name, StringComparison.Ordinal),
+            var pattern = name.EndsWith(':')
+                ? Regex.Escape(name)
+                : $@"{Regex.Escape(name)}(?![a-zA-Z0-9_-])";
+            Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, pattern),
                 $"'{name}' is marked 'not in 1.0' but now appears in vaxel.js — move the mark to implemented.");
         }
     }
@@ -91,5 +95,26 @@ public sealed class VocabularyHonestyTests
         Assert.Equal(
             File.ReadAllText(client, Encoding.UTF8).ReplaceLineEndings("\n"),
             File.ReadAllText(served, Encoding.UTF8).ReplaceLineEndings("\n"));
+    }
+
+    [Fact]
+    public void EveryDocumentedValueForm_HasARegressionCase()
+    {
+        var casesDir = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+            "conformance", "regression", "cases"));
+        Assert.True(Directory.Exists(casesDir), $"Regression cases directory must exist at {casesDir}.");
+
+        var allCases = string.Join("\n",
+            Directory.GetFiles(casesDir, "*.mjs").Select(f => File.ReadAllText(f, Encoding.UTF8)));
+
+        // G1: Dual-form attributes documented in docs/04 must have both value forms exercised in regression fixtures.
+        Assert.Contains("vx-indicator=\"busy\"", allCases);
+        Assert.Contains("vx-indicator=\"#", allCases);
+        Assert.Contains("vx-disable=\"#", allCases);
+        Assert.Contains("vx-disable>", allCases);
+        Assert.Contains("vx-transition-name=", allCases);
+        Assert.Contains("vx-transition>", allCases);
+        Assert.Contains("vx-progress=", allCases);
     }
 }

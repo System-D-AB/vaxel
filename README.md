@@ -16,7 +16,7 @@ You write Razor Pages, Views, Partials, ViewComponents, and Razor Components. Th
 Apps reference **`Vaxel.AspNetCore`**. That package pulls in the agent and serves `/_vaxel/vaxel.js`.
 
 ```xml
-<PackageReference Include="Vaxel.AspNetCore" Version="2.0.0-rc3" />
+<PackageReference Include="Vaxel.AspNetCore" Version="2.0.0-rc4" />
 ```
 
 ```csharp
@@ -96,6 +96,67 @@ push.From(orderBus.Subscribe(ct))
     .To(PushScope.Group("kitchen"), ct);
 ```
 
+## 3. Transitions, top progress bar, and loading indicators
+
+Vaxel includes built-in support for smooth region transitions (via the View Transitions API and CSS swap/settle classes), a GitHub/NProgress-style top loading bar (`#vx-progress`), and reactive in-flight indicators (`vx-indicator`, `vx-disable`).
+
+### Top loading bar (`vx-progress`) & in-flight indicators (`vx-indicator`, `vx-disable`)
+
+Every Vaxel request automatically drives a fixed top-of-viewport progress bar (`#vx-progress`) with a default `100 ms` delay threshold so instant local responses never flicker, trickling toward `90%` while in flight and completing to `100%` when the response arrives. You can also bind a boolean signal via `vx-indicator="<signal>"` or disable specific controls via `vx-disable="#id"`:
+
+```html
+<body vx-signals-if-missing='{"querying":false}'>
+  <!-- Customize the progress bar threshold ("0" / "immediate", "<ms>", or "off"),
+       toggle the 'querying' signal, and disable #run-btn while in flight -->
+  <form vx-get="/query" vx-target="#results"
+        vx-progress="100"
+        vx-indicator="querying"
+        vx-disable="#run-btn">
+    <button id="run-btn" type="submit"
+            vx-text="querying ? 'Running…' : 'Run query'">Run query</button>
+  </form>
+
+  <!-- Any element on the page can react to the indicator signal -->
+  <section id="results" vx-region vx-class:is-loading="querying">
+    @await Html.PartialAsync("_QueryResults", Model.Results)
+  </section>
+</body>
+```
+
+Theme the top progress bar with CSS custom properties:
+
+```css
+:root {
+  --vx-progress-color: #2563eb;
+  --vx-progress-height: 3px;
+}
+```
+
+### Region & shared-element transitions (`vx-transition`, `vx-transition-name`)
+
+Add `vx-transition` to a `[vx-region]` (or to `<body>` / a trigger) to wrap DOM patches in `document.startViewTransition(...)` when supported (automatically respecting `prefers-reduced-motion: reduce`), and use `vx-transition-name="<custom-ident>"` to morph shared elements smoothly between states:
+
+```html
+<main id="pane" vx-region vx-transition>
+  <article id="doc-card" vx-transition-name="active-doc">
+    <h2>@Model.Title</h2>
+    <p>@Model.Summary</p>
+  </article>
+</main>
+```
+
+During every patch on a `vx-transition` region, Vaxel also toggles `.vx-swapping` (before morph) and `.vx-settling` (for the settle frame after morph) on the target element for pure CSS transitions:
+
+```css
+#pane.vx-settling {
+  animation: vx-fade-in 160ms ease-out;
+}
+@keyframes vx-fade-in {
+  from { opacity: 0.6; transform: translateY(2px); }
+  to   { opacity: 1;   transform: translateY(0); }
+}
+```
+
 ## Concepts
 
 | Term | Meaning |
@@ -133,8 +194,9 @@ A trigger belongs on an `<a href>`, a `<form>`, or a `<button>` inside a form, e
 | `vx-vals-*` | ✅ | Extra request field, like a hidden input. Literals only: `vx-vals-tab="submissions"`. |
 | `vx-include` | ⬜ | Also send the fields of this `#id` form or container. |
 | `vx-confirm` | ✅ | Native confirm before sending. Plain text, never markup. |
-| `vx-indicator` | ✅ | Signal set `true` while this request is in flight. |
-| `vx-disable` | ✅ | Disable this element (or `#id`) while in flight. |
+| `vx-indicator` | ✅ | Signal set `true` (or `#id` toggled with `.vx-loading` / `aria-busy`) while this request is in flight. |
+| `vx-disable` | ✅ | Disable this element (or `#id`) while in flight, preserving pre-existing `disabled` state. |
+| `vx-progress` | ✅ | Top-of-viewport progress bar (`#vx-progress`) while in flight (`100 ms` default delay, `0`/`immediate`, or `off`). |
 | `vx-sync` | ✅ | Concurrent requests: `replace` (default), `queue`, `drop`, `abort`. |
 | `vx-encoding` | ✅ | `json` — send `application/json` instead of form encoding. |
 
@@ -158,7 +220,8 @@ Trigger timing, scopes, filtering, and signal writes are expressed as left-to-ri
 | `vx-ignore` | ⬜ | Skip this element and its descendants (third-party HTML that may contain `vx-*`). |
 | `vx-ignore-self` | ⬜ | Ignore this element's own attributes; still process children. |
 | `vx-overwrite-dirty` | ✅ | Let an incoming value replace what the user has typed. Off by default. |
-| `vx-transition-name` | ⬜ | Literal `view-transition-name` for the View Transition API. |
+| `vx-transition` | ✅ | Wrap patches to this region in `document.startViewTransition` and toggle `.vx-swapping` / `.vx-settling`. |
+| `vx-transition-name` | ✅ | Literal `view-transition-name` for the View Transition API. |
 | `vx-sse` | ✅ | URL of the document's one Server-Sent Events channel. |
 
 ### Signal bindings

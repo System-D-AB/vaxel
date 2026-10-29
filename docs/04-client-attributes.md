@@ -31,7 +31,8 @@ Attributes are written in Razor through Tag Helpers ([05 — .NET API](05-dotnet
 | `vx-include` | ⬜ | `#id` | Also send the fields of this form or container |
 | `vx-confirm` | ✅ | text | Native confirm before sending. Plain text, never markup |
 | `vx-indicator` | ✅ | signal name or `#id` | Sets that signal `true` (or toggles `.vx-loading` / `aria-busy` on `#id`) while a request from this trigger is in flight, `false` after — so **any** element can react through `vx-attr` / `vx-class` / `vx-show`, not just a nearby spinner |
-| `vx-disable` | ✅ | — or `#id` | Disable this element (or that one) while in flight |
+| `vx-disable` | ✅ | — or `#id` | Disable this element (or `#id`) while in flight, preserving any pre-existing `disabled` state |
+| `vx-progress` | ✅ | —, `<ms>`, `immediate`, or `off` | Top-of-viewport loading bar (`#vx-progress`, GitHub/NProgress style) while in flight. Defaults to a `100 ms` delay threshold so fast local responses never flicker; `0` / `immediate` starts instantly; `off` opts out |
 | `vx-sync` | ✅ | policy | How concurrent requests from this trigger behave: `replace` (default) · `queue` · `drop` · `abort`. See [03 — Concurrency](03-protocol.md#concurrency) |
 | `vx-encoding` | ✅ | `json` | Send an `application/json` body instead of form encoding, for endpoints using `[FromBody]` |
 
@@ -105,7 +106,8 @@ sink      = "set" ident "=" expr
 | `vx-ignore` | ⬜ | The agent does not process this element or its descendants at all — for user-authored or third-party HTML that may contain `vx-` attributes |
 | `vx-ignore-self` | ⬜ | Ignore this element's own attributes but still process its children |
 | `vx-overwrite-dirty` | ✅ | On an input: let an incoming value replace what the user has typed. Off by default — dirty input wins (see [02 — Morph](02-architecture.md#dirty-input-wins-over-an-incoming-value)) |
-| `vx-transition-name` | ⬜ | Literal `view-transition-name` for the View Transition API |
+| `vx-transition` | ✅ | Wrap patches to this region (or triggered from this element) in `document.startViewTransition(...)` when supported and `prefers-reduced-motion: reduce` is not active, and toggle `.vx-swapping` / `.vx-settling` CSS transition classes |
+| `vx-transition-name` | ✅ | Literal `view-transition-name` (`<custom-ident>`) applied as `el.style.viewTransitionName` for the View Transition API |
 | `vx-sse` | ✅ | URL — open the document's single Server-Sent Events channel |
 
 ---
@@ -180,14 +182,14 @@ Because `eval` and `new Function` break `script-src 'self'`, while forcing every
 | `vx:before-apply` | Document parsed, before patching | patches, directive |
 | `vx:after-apply` | All patches applied and bound | patches, ignored |
 | `vx:signals-changed` | After a signal patch or a binding write | changed keys |
-| `vx:error` | Transport, parse, expression, or patch-apply failure | `{ reason, url, target, error, doc }` (plus `fallback: 'replace' \| 'navigate' \| 'none'` on `reason: 'apply'`) |
+| `vx:error` | Trigger, transport, parse, expression, or patch-apply failure | `{ reason, url, target, error, doc }` (`reason: 'trigger' \| 'transport' \| 'apply' \| 'expression' \| 'unknown-mode' \| 'missing-target'`, plus `fallback` on `'apply'`) |
 | `vx:sse-state` | Stream connected, dropped, reconnecting | state, attempt |
 
 Islands use `vx:before-apply` / `vx:after-apply` to suspend and resume; nothing else in the framework depends on these events, so an application may ignore them entirely.
 
 ## Error reporting
 
-A detectable mistake — an unknown signal name in a binding, a target that is not an id, a trigger on a non-degradable element, an unknown swap mode, or a DOM morph error — is reported through `vx:error` with `{ reason, url, target, error, doc }`. When a morph throws while applying a `<vx-patch>`, the agent retries that patch as a plain child replacement (`fallback: 'replace'`) and continues applying the remaining patches and `<vx-directive>` (`push-url`, `title`, `announce`, `focus`, `scroll`) so the user never sees a dead click. Silence is a bug; a stack trace is a missed teaching opportunity.
+A detectable mistake — an unknown signal name in a binding, a target that is not an id, a trigger on a non-degradable element, an unknown swap mode, a pre-fetch trigger error (`reason: 'trigger'`), or a DOM morph error (`reason: 'apply'`) — is reported through `vx:error` with `{ reason, url, target, error, doc }`. When a pre-fetch exception occurs inside a trigger handler, the agent emits `vx:error` with `reason: 'trigger'` and falls back to native `<form>` submission or `<a href>` navigation. When a morph throws while applying a `<vx-patch>`, the agent retries that patch as a plain child replacement (`fallback: 'replace'`) and continues applying the remaining patches and `<vx-directive>` (`push-url`, `title`, `announce`, `focus`, `scroll`) so the user never sees a dead click. Silence is a bug; a stack trace is a missed teaching opportunity.
 
 ## Accessibility obligations of the agent
 

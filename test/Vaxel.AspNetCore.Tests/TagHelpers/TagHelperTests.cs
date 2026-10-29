@@ -526,6 +526,82 @@ public sealed class TagHelperTests : IClassFixture<ComposerApiFactory>
         Assert.Contains("filter !typing && !altKey && !shiftKey", output.Attributes["vx-on"].Value.ToString());
     }
 
+    [Fact]
+    public void VxIndicatorTagHelper_WithRegisteredSignalSchema_ValidatesSignalName()
+    {
+        var options = new VaxelOptions
+        {
+            SignalSchema = new SignalSchema<SampleTriggerSignals>(),
+        };
+        var optsWrapper = Microsoft.Extensions.Options.Options.Create(options);
+
+        // Known signal 'open' passes
+        var validHelper = new VxIndicatorTagHelper(optsWrapper) { Indicator = "open" };
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var outValid = new TagHelperOutput("form", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        validHelper.Process(ctx, outValid);
+        Assert.Equal("open", outValid.Attributes["vx-indicator"].Value);
+
+        // Selector '#spinner' passes even with schema
+        var selHelper = new VxIndicatorTagHelper(optsWrapper) { Indicator = "#spinner" };
+        var outSel = new TagHelperOutput("form", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        selHelper.Process(ctx, outSel);
+        Assert.Equal("#spinner", outSel.Attributes["vx-indicator"].Value);
+
+        // Unknown signal 'unknownBusy' throws VaxelTagHelperException when schema is registered
+        var unknownHelper = new VxIndicatorTagHelper(optsWrapper) { Indicator = "unknownBusy" };
+        var outUnknown = new TagHelperOutput("form", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        var ex = Assert.Throws<VaxelTagHelperException>(() => unknownHelper.Process(ctx, outUnknown));
+        Assert.Contains("unknownBusy", ex.Message);
+    }
+
+    [Fact]
+    public void VxIndicatorTagHelper_DisableSelectorAndProgressValidation()
+    {
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+
+        // S9: vx-disable="#run" passes
+        var disableIdHelper = new VxIndicatorTagHelper { Disable = "#run" };
+        var outDisableId = new TagHelperOutput("form", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        disableIdHelper.Process(ctx, outDisableId);
+        Assert.Equal("#run", outDisableId.Attributes["vx-disable"].Value);
+
+        // S9: vx-disable="not-an-id" throws VaxelTagHelperException
+        var badDisableHelper = new VxIndicatorTagHelper { Disable = "run" };
+        var outBadDisable = new TagHelperOutput("form", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        Assert.Throws<VaxelTagHelperException>(() => badDisableHelper.Process(ctx, outBadDisable));
+
+        // S11: vx-progress="0", "150", "off", "immediate" pass; invalid string throws
+        var progHelper = new VxIndicatorTagHelper { Progress = "150" };
+        var outProg = new TagHelperOutput("form", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        progHelper.Process(ctx, outProg);
+        Assert.Equal("150", outProg.Attributes["vx-progress"].Value);
+
+        var badProgHelper = new VxIndicatorTagHelper { Progress = "invalid" };
+        var outBadProg = new TagHelperOutput("form", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        Assert.Throws<VaxelTagHelperException>(() => badProgHelper.Process(ctx, outBadProg));
+    }
+
+    [Fact]
+    public void VxTransitionTagHelper_ValidatesTransitionNameAndMode()
+    {
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+
+        var valid = new VxTransitionTagHelper { TransitionName = "hero-card", Transition = "on" };
+        var outValid = new TagHelperOutput("div", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        valid.Process(ctx, outValid);
+        Assert.Equal("hero-card", outValid.Attributes["vx-transition-name"].Value);
+        Assert.Equal("on", outValid.Attributes["vx-transition"].Value);
+
+        var badName = new VxTransitionTagHelper { TransitionName = "123 invalid" };
+        var outBadName = new TagHelperOutput("div", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        Assert.Throws<VaxelTagHelperException>(() => badName.Process(ctx, outBadName));
+
+        var badMode = new VxTransitionTagHelper { Transition = "spin" };
+        var outBadMode = new TagHelperOutput("div", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        Assert.Throws<VaxelTagHelperException>(() => badMode.Process(ctx, outBadMode));
+    }
+
     private static TagHelperOutput RenderAntiforgeryMeta(VaxelOptions options)
     {
         var antiforgery = new StubAntiforgery();

@@ -36,7 +36,14 @@ public sealed class AgentBundleTests
         var gzipSize = memoryStream.ToArray().Length;
 
         // Size budget constraint: v2.0 total bundle ≤ 20 KB (20,480 bytes) gzip
-        const int MaxGzipBudget = 20 * 1024;
+        const int MaxGzipBudgetKb = 20;
+        const int MaxGzipBudget = MaxGzipBudgetKb * 1024;
+        var roadmapPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "docs", "08-roadmap.md"));
+        if (File.Exists(roadmapPath))
+        {
+            var roadmap = File.ReadAllText(roadmapPath, Encoding.UTF8);
+            Assert.Contains($"{MaxGzipBudgetKb} KB gzip", roadmap);
+        }
         Assert.True(gzipSize <= MaxGzipBudget, $"vaxel.js gzip size ({gzipSize} bytes) exceeded budget ({MaxGzipBudget} bytes).");
     }
 
