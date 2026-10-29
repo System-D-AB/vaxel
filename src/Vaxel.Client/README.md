@@ -11,8 +11,8 @@ Static client assets and agent runtime for **vaxel** hypermedia applications.
 This package contains the pre-compiled, standalone JavaScript client agent (`/_vaxel/vaxel.js`) and developer inspector (`/_vaxel/vaxel.dev.js`).
 
 - **No Node.js or npm required**: All client assets are packaged directly into the NuGet package as static web assets.
-- **Zero Eval**: Pure DOM mutation and signal handling without `eval()` or string-to-code compilation.
-- **Ultra-lightweight**: ~9–10 KB gzipped agent bundle (including morph engine and signal store).
+- **Zero Eval**: Closed AST expression interpreter, declarative `vx-on` event pipelines, auto-tracking signal store, and DOM morphing — with zero `eval()`, zero `new Function()`, and strict `script-src 'self'` CSP compliance.
+- **Ultra-lightweight**: ≤ 20 KB gzipped agent bundle (including auto-tracking signal store, closed expression engine, `vx-on` pipeline operators, and Idiomorph DOM morph engine).
 
 ## Attributions
 

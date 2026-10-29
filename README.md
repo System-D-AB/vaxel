@@ -1,52 +1,22 @@
 # vaxel
 
-Hypermedia-driven web apps for .NET.
+Reactive, hypermedia-driven web apps for .NET.
 
-**Repository:** [github.com/System-D-AB/vaxel](https://github.com/System-D-AB/vaxel)
+You write Razor Pages, Views, Partials, ViewComponents, and Razor Components. The server sends HTML; a small agent patches it into the page, reactive signals and closed expressions handle client-side UI state, and declarative event pipelines compose time on both the client and server — with zero `unsafe-eval`.
 
-You write plain Razor Pages, Views, Partials, and ViewComponents. The server sends HTML; a small agent patches it into the page. There is no client router, no render tree, and no JSON-for-the-frontend. The response *is* the next UI.
+## What it is
 
-SPA-like tabs, forms, and live regions — without React, Blazor, or any other client-heavy framework. No `unsafe-eval`.
-
-```csharp
-using Vaxel;
-
-public async Task<IResult> OnPostAsync()
-{
-    if (!ModelState.IsValid)
-    {
-        Response.StatusCode = 422;
-        return await Vaxel.PageOrPatch(HttpContext,
-            page: () => Task.FromResult<IResult>(Page()),
-            patch: async () => Patch.Status(422)
-                .Replace("#contact", await _composer.PartialAsync("_ContactForm", this)));
-    }
-
-    return await Vaxel.PageOrPatch(HttpContext,
-        page: () => Task.FromResult<IResult>(Redirect("/contact?sent=1")),
-        patch: async () => Patch.Ok()
-            .Replace("#contact", await _composer.PartialAsync("_ContactThanks", this))
-            .PushUrl("/contact?sent=1"));
-}
-```
-
-```html
-<section id="contact" vx-region>
-  <form method="post" action="/contact" vx-post vx-target="#contact">
-    <!-- the form works without JavaScript; with the agent it becomes a fragment swap -->
-  </form>
-</section>
-<script src="/_vaxel/vaxel.js"></script>
-```
-
-The link or form works with no JavaScript. With the agent loaded, the same Razor still renders — the client only morphs it in, keeps focus, and updates the URL.
+- **Hypermedia & Razor** — the server sends HTML that names its targets (`#pane`, `#results`, `#contact`). Every byte of HTML comes from Razor: Pages, Views, Partials, ViewComponents, and static Razor Components.
+- **Reactive signals & closed expressions** — an auto-tracking signal store and closed AST expression engine on the client, parsed and type-checked against your C# signal schema at render time on the server.
+- **A small client agent** — intercepts links and forms, runs `vx-on` event pipelines (`debounce`, `throttle`, `distinct`, `filter`, `set`), morphs HTML in place while preserving focus and dirty inputs, updates history, and listens to one SSE channel.
+- **Server push pipelines & `Bus<T>`** — compose `IAsyncEnumerable<T>` streams and bounded domain buses into real-time SSE patches with the same `Debounce`, `Throttle`, and `DistinctUntilChanged` vocabulary.
 
 ## Install
 
 Apps reference **`Vaxel.AspNetCore`**. That package pulls in the agent and serves `/_vaxel/vaxel.js`.
 
 ```xml
-<PackageReference Include="Vaxel.AspNetCore" Version="1.0.0" />
+<PackageReference Include="Vaxel.AspNetCore" Version="2.0.0-rc1" />
 ```
 
 ```csharp
@@ -60,16 +30,71 @@ app.MapRazorPages();
 app.MapVaxelStream("/_vaxel/stream"); // optional SSE
 ```
 
-CSP can stay `script-src 'self'`. There is no expression language, so there is no `unsafe-eval`.
+CSP stays `script-src 'self'`.
 
-## What it is
+## 1. Client-side reactivity: signals, expressions, and `vx-on` pipelines
 
-- **Hypermedia** — the server sends HTML that names its targets (`#pane`, `#contact`). The next screen is a document, not a JSON payload for a client to render.
-- **A rendering discipline** — every byte of HTML comes from Razor: Pages, Views, Partials, ViewComponents, static Razor Components.
-- **A small client agent** — intercept, request, morph, restore focus, push history, one SSE channel. Not a router, not a virtual DOM.
-- **A signal store** — named UI values that travel with requests. Signals hold data, never code.
+Start in HTML with `vx-signals`, expression bindings (`vx-text`, `vx-show`, `vx-class:*`, `vx-attr:*`), two-way `vx-bind`, and `vx-on` event pipelines:
 
-It is not a SPA, not a component framework, and not a JavaScript framework you write JavaScript in. The SPA-like feel comes from patching HTML in place, with a full page behind every fragment.
+```html
+<div vx-signals='{"qty":1,"price":25,"saving":false,"q":"","open":false}'>
+  <!-- Pure expressions over signals -->
+  <p vx-text="Total: $@{ qty * price }"></p>
+  <button type="submit" vx-attr:disabled="qty <= 0 || saving">Save</button>
+
+  <!-- Two-way input binding + debounced search pipeline -->
+  <input name="q" vx-bind="q"
+         vx-get="/search" vx-target="#results"
+         vx-on="input | debounce 200 | distinct" />
+
+  <!-- Keyboard shortcut writing directly to a signal -->
+  <div vx-show="open" vx-on="keydown window | key Escape | set open = false">
+    Details drawer
+  </div>
+</div>
+
+<script src="/_vaxel/vaxel.js"></script>
+```
+
+### How expressions work (server-validated at render time, client AST-interpreted, zero `eval`)
+
+1. **Render-time validation on the server:** When Razor renders `vx-show`, `vx-class:*`, `vx-attr:*`, `vx-text`, or a `vx-on` `filter`/`set` stage, the Tag Helpers (`VxBindTagHelper` and `VxOnTagHelper`) parse the expression in C# (Pratt parser, 512-char / 32-depth caps) and validate it against your registered `AddSignalSchema<T>()` model. Syntax errors, unknown functions, unknown signal names, static type mismatches (e.g., `vx-show="tabs > 1"` when `Tabs` is a list), or forbidden attributes (`href`, `src`, `action`, `formaction`, `style`, `on*`) throw `VaxelTagHelperException` with the exact character span before HTML leaves the server.
+2. **Zero-eval execution on the client:** In the browser, `vaxel.js` evaluates the expression by walking a finite AST over the auto-tracking signal bag and a 20-function pure whitelist (`abs`, `min`, `max`, `len`, `trim`, `contains`, `toLowerCase`, …). It never calls `eval()`, `new Function()`, or `window`, blocks `__proto__`/`constructor`/`prototype` via own-property lookup, and re-runs a binding only when a signal it actually read changes. Both the C# validator and JS interpreter are verified against a shared **312-case conformance corpus**.
+
+## 2. Server-side rendering: Razor Pages, Components, and live push
+
+When a user clicks a link, submits a form, or triggers a `vx-on` pipeline, the server renders the next UI with `IFragmentComposer` (Partials, Views, ViewComponents, or Razor Components) and returns a patch document. `Vaxel.PageOrPatch` serves both a full page on direct navigation and a fragment patch for the agent:
+
+```html
+<section id="results" vx-region>
+  @await Html.PartialAsync("_SearchResults", Model.Results)
+</section>
+```
+
+```csharp
+using Vaxel;
+
+public async Task<IResult> OnGetAsync(string? q)
+{
+    Results = await _store.SearchAsync(q);
+
+    return await Vaxel.PageOrPatch(HttpContext,
+        page: () => Task.FromResult<IResult>(Page()),
+        patch: async () => Patch.Ok()
+            .Replace("#results", await _composer.PartialAsync("_SearchResults", Results))
+            .ReplaceUrl($"/search?q={Uri.EscapeDataString(q ?? "")}"));
+}
+```
+
+For real-time updates, compose `IAsyncEnumerable<T>` streams or a bounded `IBus<T>` into SSE patches using the same stream operators on the server:
+
+```csharp
+push.From(orderBus.Subscribe(ct))
+    .Throttle(TimeSpan.FromMilliseconds(250))
+    .Select(async (evt, recipient, composer, token) =>
+        Patch.Ok().Replace($"#order-{evt.Id}", await composer.PartialAsync("_OrderRow", evt)))
+    .To(PushScope.Group("kitchen"), ct);
+```
 
 ## Concepts
 
@@ -77,32 +102,32 @@ It is not a SPA, not a component framework, and not a JavaScript framework you w
 |---|---|
 | **Page** | A full HTML document. What you get with no JavaScript, a refresh, or a shared link. Ordinary Razor. |
 | **Patch** | An HTML fragment document (`<vx-patch target="#pane">…</vx-patch>`). Same Razor as the page, wrapped so the agent can swap only that region. A patch is an optimisation of a page, never a capability the page lacks. |
-| **Region** | An element with an id and `vx-region` (`#pane`, `#contact`). It is a patch target **and** it must exist on the full page for that URL. |
-| **Fragment** | The inner HTML of a region, usually a Razor partial. `IFragmentComposer` renders it. |
-| **Agent** | The small script at `/_vaxel/vaxel.js`. It intercepts `vx-*` links and forms, sends `VX-Request: 1`, morphs the patch into the DOM, and updates the URL. It is not a client router. |
+| **Region** | An element with an id and `vx-region` (`#pane`, `#results`). It is a patch target **and** it must exist on the full page for that URL. |
+| **Fragment** | The inner HTML of a region — a Razor Partial, View, ViewComponent, or Razor Component rendered by `IFragmentComposer`. |
+| **Agent** | The small script at `/_vaxel/vaxel.js`. It intercepts `vx-*` links and forms, sends `VX-Request: 1`, morphs the patch into the DOM, and updates the URL. |
 | **Morph** | Identity-preserving DOM update. Matching ids keep the node; focus, caret, and dirty inputs survive when they should. |
-| **Signal** | A named JSON value on the client (`tab`, `railOpen`). Sent with every agent request in the `VX-Signals` header. Bindings can show, hide, or two-way bind it. Signals are data, never expressions, and never authority — do not authorise from them. |
+| **Signal** | A named JSON value on the client (`tab`, `railOpen`). Sent with every agent request in the `VX-Signals` header. Bindings can show, hide, format text, or two-way bind it using signal names or pure expressions over signals. Signals are never authority — do not authorise from them. |
 | **PageOrPatch** | One handler, two branches: full `Page()` when the browser navigated; `Patch.Ok()` when the agent asked. That is how a region stays reachable as a page. |
 | **Trigger** | A real `<a href>` or `<form>` with `vx-get` / `vx-post`. Without the agent it navigates normally. |
 | **Refusal** | `Patch.Refused` — a normal non-2xx patch (notice in `#notices`), not a thrown exception. |
-| **Stream** | One SSE connection (`vx-sse`) for server push into regions. No per-user UI tree on the server. |
+| **Stream** | One SSE connection (`vx-sse`) for server push into regions. |
 
-State lives in three places only: the **URL** (shareable), the server's **store** (domain data), and **signals** (ephemeral UI). The server does not keep a circuit or a component tree between requests.
+State lives in three places: the **URL** (shareable), the server's **store** (domain data), and **signals** (ephemeral UI).
 
 ## Attributes
 
-The vocabulary is closed. Every value is data — a URL, a selector, a signal name, a duration, a literal — never an expression. Razor writes these through Tag Helpers; the names below are what the agent reads. Exact semantics live in [docs/04](docs/04-client-attributes.md).
+The vocabulary is closed. Every value is data — a URL, a selector, a signal name, a duration, a literal — or a **pure expression over signals** in binding attributes (`vx-show`, `vx-class:*`, `vx-attr:*`, `vx-text`) and `vx-on` `filter`/`set` stages. Nothing is evaluated as JavaScript (`eval` or `Function()`). Razor writes these through Tag Helpers; the names below are what the agent reads. Exact semantics live in [docs/04](docs/04-client-attributes.md).
 
-A trigger belongs on an `<a href>`, a `<form>`, or a `<button>` inside a form, except load / visible / poll / window listeners.
+A trigger belongs on an `<a href>`, a `<form>`, or a `<button>` inside a form, except `load` / `visible` / `interval` / `window` / `document` listeners.
 
-**Status.** The vocabulary is the full contract; the `1.0` column says what the shipped agent implements today. ✅ in 1.0 · ⬜ documented, not in 1.0 (planned for v1.1) · 🖥 server-side only. See [docs/04](docs/04-client-attributes.md).
+**Status.** ✅ implemented in the shipped agent · ⬜ documented, not yet implemented · 🖥 server-side only. See [docs/04](docs/04-client-attributes.md).
 
 ### Triggers
 
-| Attribute | 1.0 | |
+| Attribute | Status | |
 |---|---|---|
 | `vx-get` `vx-post` `vx-put` `vx-patch` `vx-delete` | ✅ | Issue that method. On `<a>` / `<form>`, defaults to `href` / `action`. A `vx-get` form sends its fields as the query string. |
-| `vx-on` | ⬜ | Event that fires the request (`click`, `submit`, `input`, …). |
+| `vx-on` | ✅ | Declarative event stream pipeline (`source \| operator... \| sink`). Defaults when omitted: `click` on `<a>`/`<button>`, `submit` on `<form>`. |
 | `vx-target` | ✅ | Advisory `#id` sent as `VX-Target`. The server decides what it patches. |
 | `vx-swap` | ⬜ | Advisory swap mode for the response. |
 | `vx-vals-*` | ✅ | Extra request field, like a hidden input. Literals only: `vx-vals-tab="submissions"`. |
@@ -113,26 +138,19 @@ A trigger belongs on an `<a href>`, a `<form>`, or a `<button>` inside a form, e
 | `vx-sync` | ✅ | Concurrent requests: `replace` (default), `queue`, `drop`, `abort`. |
 | `vx-encoding` | ✅ | `json` — send `application/json` instead of form encoding. |
 
-### Trigger modifiers
+### Trigger chains (`vx-on`)
 
-All trigger modifiers are ⬜ **not in 1.0** (planned for v1.1).
+Trigger timing, scopes, filtering, and signal writes are expressed as left-to-right pipelines inside `vx-on="source | operator... | sink"`, validated at render time by `VxOnTagHelper` and automatically disposed (`takeUntil`) when a region is morphed out:
 
-| Attribute | 1.0 | |
+| Stage | Status | Examples |
 |---|---|---|
-| `vx-debounce` `vx-throttle` | ⬜ | Coalesce or rate-limit, in ms. `vx-debounce-leading` fires on the leading edge. |
-| `vx-delay` | ⬜ | Wait this many ms before sending. |
-| `vx-once` | ⬜ | Fire at most once, then the trigger is inert. |
-| `vx-prevent` `vx-stop` | ⬜ | `preventDefault` / `stopPropagation`. |
-| `vx-capture` `vx-passive` | ⬜ | Listener options. |
-| `vx-window` `vx-document` | ⬜ | Attach the listener to `window` / `document` (e.g. Escape to close). |
-| `vx-outside` | ⬜ | Fire when the event happens outside this element (click-away). |
-| `vx-trigger-load` | ⬜ | Fire when the element enters the document. `vx-trigger-load-delay` waits first. |
-| `vx-trigger-visible` | ⬜ | Fire on viewport intersection (`-threshold`, `-exit`, `-once`). |
-| `vx-poll` | ⬜ | Repeat while the element exists, in ms (1 s floor). Prefer SSE. |
+| **Sources & scopes** | ✅ | `<event>` (`input`, `click`, `keydown`, …), `<event> window`, `<event> document`, `<event> outside`, `interval <ms>` (1 s floor), `visible`, `load` |
+| **Operators** | ✅ | `debounce <ms>`, `throttle <ms>`, `delay <ms>`, `once`, `distinct`, `key <KeyName>`, `filter <expr>`, `prevent`, `stop` |
+| **Sinks** | ✅ | Default: fire the element's (or enclosing form's) HTTP verb · Signal write: `set <ident> = <expr>` |
 
 ### Regions and morph
 
-| Attribute | 1.0 | |
+| Attribute | Status | |
 |---|---|---|
 | `vx-region` | 🖥 | This element is a patch target. Documents intent; scopes focus restoration. |
 | `vx-preserve` | ✅ | Never morph this subtree — an island owns it. |
@@ -145,23 +163,23 @@ All trigger modifiers are ⬜ **not in 1.0** (planned for v1.1).
 
 ### Signal bindings
 
-Every binding names **one** signal. No operators, no comparisons, no dotted paths.
+`vx-text`, `vx-show`, `vx-class:<name>`, and `vx-attr:<name>` accept either a signal name or a **closed expression over signals** (arithmetic, comparisons, `&& || ! ?:`, dotted paths, and a 20-function pure whitelist), validated at render time and evaluated inside an auto-tracking `effect`.
 
-| Attribute | 1.0 | |
+| Attribute | Status | |
 |---|---|---|
-| `vx-text` | ✅ | Text content becomes the signal's value. |
-| `vx-show` | ✅ | Hidden when the signal is falsy. |
-| `vx-class:<name>` | ✅ | Class `<name>` present while the signal is truthy. |
-| `vx-attr:<name>` | ✅ | Attribute `<name>` set to the signal; removed when `null` / `false`. |
-| `vx-style:<prop>` | ✅ | Inline style via CSSOM. Prefer `vx-class`; never bind untrusted values. |
-| `vx-bind` | ✅ | Two-way: input value ⇄ signal. |
+| `vx-text` | ✅ | `textContent` becomes the expression's value or interpolated string (`"Showing @{ count } rows"`). Never sets `innerHTML`. |
+| `vx-show` | ✅ | Shown when the boolean expression is `true`; hidden when `false` or on evaluation refusal. |
+| `vx-class:<name>` | ✅ | Class `<name>` present while the boolean expression evaluates to `true`. |
+| `vx-attr:<name>` | ✅ | Attribute `<name>` set to the expression's value; removed when `null` / `false`. Refused at render time on `href`, `src`, `action`, `formaction`, `style`, and `on*`. |
+| `vx-style:<prop>` | ✅ | Inline style via CSSOM from a single signal name. Prefer `vx-class`; never bind untrusted values. |
+| `vx-bind` | ✅ | Two-way: input value ⇄ signal name. |
 | `vx-bind-event` | ⬜ | Which events sync `vx-bind` (default `input` / `change`). |
 | `vx-bind-prop` | ⬜ | Bind an element property rather than its value. |
-| `vx-signal-set:<event>` | ⬜ | On that event, set a signal to a literal: `vx-signal-set:click="tab=submissions"`. |
+| `vx-signal-set:<event>` | ⬜ | Superseded by `vx-on="<event> \| set <name> = <expr>"`. |
 
 ### Signal state
 
-| Attribute | 1.0 | |
+| Attribute | Status | |
 |---|---|---|
 | `vx-signals` | ✅ | JSON seed at first paint: `vx-signals='{"tab":"overview"}'`. |
 | `vx-signals-if-missing` | ✅ | Same, but do not overwrite a key that already exists. |
@@ -188,7 +206,7 @@ Every binding names **one** signal. No operators, no comparisons, no dotted path
 dotnet run --project samples/Workbench/Workbench.csproj
 ```
 
-The Workbench is a small admin shell: submissions (a role-checked approve), proposals (inline edit + live rail), a contact form, and read-only settings. Sign in as Alice to approve; as Bob to see a refusal.
+The Workbench is a small admin shell: submissions (a role-checked approve), proposals (inline edit + live rail), a contact form, live form (`cookbook/05`), order board (`cookbook/06`), and read-only settings. Sign in as Alice to approve; as Bob to see a refusal.
 
 ## Docs
 
@@ -217,8 +235,10 @@ The contract lives in [`docs/`](docs/README.md). Start with [principles](docs/01
 | [01 — Search as you type](cookbook/01-search-as-you-type.md) | Debounced input, suggestion list, URL sync |
 | [02 — Contact form](cookbook/02-contact-form.md) | Submit, server validation in place, double-submit guard |
 | [03 — Tabs, rail and inline edit](cookbook/03-tabs-rail-and-inline-edit.md) | Tab strip as links, one action patching two regions |
-| [04 — Live updates](cookbook/04-live-updates-sse.md) | SSE push per recipient, reconnect |
+| [04 — Live updates](cookbook/04-live-updates-sse.md) | SSE push per recipient, server pipelines, reconnect |
+| [05 — Live form](cookbook/05-live-form.md) | Client expressions over signals, live preview, authoritative server submit |
+| [06 — Order board](cookbook/06-order-board.md) | `Bus<T>` domain events and `IPushChannel.From` pipelines |
 
 ## Licence
 
-MIT. Source: [github.com/System-D-AB/vaxel](https://github.com/System-D-AB/vaxel). No dependency in the .NET packages beyond ASP.NET Core. The agent's only third-party code is a DOM morph implementation (BSD-2).
+MIT. Source: [github.com/System-D-AB/vaxel](https://github.com/System-D-AB/vaxel). No dependency in the .NET packages beyond ASP.NET Core. The agent's only third-party code is a DOM morph implementation (BSD-2) and expression corpus test fixtures (Apache-2.0).

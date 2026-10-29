@@ -2,7 +2,7 @@
 
 The specification is versioned because it is the contract. Every entry says what changed **and why it was wrong**, because a spec that quietly improves teaches nobody.
 
-## v2.0 (in progress)
+## v2.0.0-rc1 — 2026-10-29
 
 ### `v2.0-push-pipelines` (P3) — server push pipelines over `IAsyncEnumerable<T>` & bounded `Bus<T>`
 

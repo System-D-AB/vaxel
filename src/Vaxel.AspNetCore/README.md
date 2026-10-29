@@ -76,6 +76,43 @@ public async Task<IActionResult> OnGetAsync()
 }
 ```
 
+## What's in v2.0
+
+### 1. Render-Time Validated Signal Expressions (Zero `eval`)
+
+`vx-show`, `vx-class:*`, `vx-attr:*`, `vx-text` (with `@{ … }` interpolation), and `vx-on` `filter`/`set` stages accept pure expressions over signals.
+- **Server validation at render time:** `VxBindTagHelper` and `VxOnTagHelper` parse expressions in C# and type-check them against your registered `AddSignalSchema<T>()` model. Syntax errors, unknown functions, unknown signals, type mismatches, or forbidden attributes (`href`, `src`, `action`, `formaction`, `style`, `on*`) throw `VaxelTagHelperException` with the offending character span during Razor rendering.
+- **Client AST execution without `eval`:** The browser agent evaluates the parsed AST over the auto-tracking signal store and a 20-function pure whitelist — with zero `eval()`, zero `new Function()`, and own-property guards blocking `__proto__`/`constructor`/`prototype`.
+
+### 2. Declarative `vx-on` Event Stream Pipelines
+
+Compose DOM events, `window`/`document`/`outside` scopes, `interval <ms>`, `visible`, and `load` through stream operators (`debounce`, `throttle`, `delay`, `once`, `distinct`, `key`, `filter <expr>`, `prevent`, `stop`) into either an HTTP request or `set <signal> = <expr>`:
+
+```html
+<div vx-signals='{"qty":1,"price":25,"saving":false,"q":"","open":false}'>
+    <p vx-text="Preview total: $@{ qty * price }"></p>
+    <button type="submit" vx-attr:disabled="qty <= 0 || saving">Save</button>
+
+    <input name="q" vx-bind="q"
+           vx-get="/search" vx-target="#results"
+           vx-on="input | debounce 200 | distinct" />
+
+    <div vx-show="open" vx-on="keydown window | key Escape | set open = false">…</div>
+</div>
+```
+
+### 3. Server Push Pipelines & Bounded `Bus<T>`
+
+Compose `IAsyncEnumerable<T>` sources and in-process/backplane-enabled `IBus<T>` topics into per-recipient SSE patches with zero Rx.NET dependencies:
+
+```csharp
+push.From(orderBus.Subscribe(ct))
+    .Throttle(TimeSpan.FromMilliseconds(250))
+    .Select(async (evt, recipient, composer, token) =>
+        Patch.Ok().Replace($"#order-{evt.Id}", await composer.PartialAsync("_OrderRow", evt)))
+    .To(PushScope.Group("kitchen"), ct);
+```
+
 ## Security & CSP
 
 vaxel is designed from the ground up to run under strict Content Security Policies with **zero `unsafe-eval`**, **zero `new Function()`**, and **zero string timers**:
