@@ -70,13 +70,15 @@ An input is **dirty** when the user has changed it since it was last rendered or
 
 Checkboxes, radios, selects and `contenteditable` follow the same rule. A file input is never overwritten, because it cannot be.
 
-### Nested regions
+### Nested regions and lifetime (`takeUntil` morph)
 
 A region may contain another region. When a patch targets an outer region:
 
 - inner regions are morphed as part of it, unless they carry `vx-preserve`;
 - focus restoration scopes to the **innermost** region that contained focus, not the outer one;
 - the parity harness treats each region independently — an inner region must still be reachable as a page on its own, which is what stops a screen from growing a fragment that exists nowhere else.
+
+**Region lifetime (`takeUntil` the next morph).** When a morph or `replace`/`remove` patch removes an element from the document, the agent immediately disposes its reactive binding effects, clears any active `vx-on` timers (`debounce`, `throttle`, `delay`, `interval`), detaches any `window` / `document` / `outside` event listeners or `IntersectionObserver` instances owned by that element, and aborts (`AbortController.abort()`) + abandons any in-flight HTTP request initiated by a trigger inside the removed subtree. A late response from a replaced pane can never overwrite the new screen.
 
 ## What actually ships to the browser
 
@@ -85,13 +87,13 @@ Three pieces, not one. Stating them plainly because "it's just signals" is a cla
 | Piece | Est. gzip | What it does |
 |---|---|---|
 | **Signal store** | ~1 KB | `get`/`set`/`patch`/`subscribe`, and the name-bound DOM updates |
-| **Agent** | ~4–5 KB | Intercept triggers; build and send requests (headers, antiforgery, sequencing, `vx-sync` policy); parse patch documents; apply patches and directives; focus, scroll and history restoration; indicators; debounce/throttle; the SSE channel |
+| **Agent** | ~4–5 KB | Intercept triggers and `vx-on` pipelines; closed expression evaluator; build and send requests (headers, antiforgery, sequencing, `vx-sync` policy); parse patch documents; apply patches and directives; focus, scroll and history restoration; indicators; the SSE channel |
 | **Morph** | ~4 KB | Idiomorph or an in-house equivalent — the merge algorithm that preserves identity, focus, caret and dirty input |
 | **Total** | **~9–10 KB** | Budget cap **12 KB**; goal under 10 |
 
 For comparison: Datastar ~11 KB, htmx ~16.6 KB, htmx + Alpine ~32 KB. These are estimates until a bundle exists, and the CI size gate is what turns them into facts.
 
-What is **not** in there, and never will be: an expression evaluator, a template engine, a virtual DOM or reconciler, a component model, a client router, a state manager beyond the signal bag, a build step. Application **islands** (a drag surface, a chart) are the application's own code, not the framework's.
+What is **not** in there, and never will be: an arbitrary JS evaluator (`eval` / `Function()`), a template engine, a virtual DOM or reconciler, a component model, a client router, a state manager beyond the signal bag, a build step. Application **islands** (a drag surface, a chart) are the application's own code, not the framework's.
 
 ## Signals
 

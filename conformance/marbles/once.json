@@ -1,0 +1,7 @@
+{
+  "name": "marble_once",
+  "operator": "once",
+  "input": "-a-b-c---|",
+  "args": [],
+  "expect": "-a-------|"
+}

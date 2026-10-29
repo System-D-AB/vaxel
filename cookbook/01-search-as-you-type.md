@@ -11,7 +11,7 @@
 ```html
 @* Pages/Search/Index.cshtml *@
 <form id="search-form" method="get" asp-page="/Search/Index" vx-get vx-target="#results"
-      vx-on="input" vx-debounce="200" vx-indicator="searching" vx-url-sync="q"
+      vx-on="input | debounce 200 | distinct" vx-indicator="searching" vx-url-sync="q"
       vx-signals='@Json.Serialize(new { q = Model.Query, searching = false, count = Model.Suggestions.Count })'>
   <label for="q">Search customers</label>
   <input id="q" name="q" type="search" value="@Model.Query"
@@ -30,7 +30,7 @@
 </div>
 ```
 
-Read what that says: it is a **real GET form**. Without the agent, Enter submits it and the page renders with results — that is the R3 invariant paying for itself. With the agent, `vx-on="input"` plus `vx-debounce="200"` turns each pause into a request whose response replaces `#results` only.
+Read what that says: it is a **real GET form**. Without the agent, Enter submits it and the page renders with results — that is the R3 invariant paying for itself. With the agent, the single pipeline `vx-on="input | debounce 200 | distinct"` coalesces keystrokes across a 200 ms pause, skips consecutive duplicate values, and sends a GET request whose response replaces `#results` only.
 
 Because bindings accept closed expressions over signals (Rule R2), the view derives `len(trim(q)) == 1`, `len(trim(q)) < 2 || searching`, and `count > 0 ? 'true' : 'false'` directly on the client without needing the server to mint separate boolean signals (`hasResults`, `isTooShort`, `canSubmit`). And when `AddSignalSchema<SearchSignals>()` is registered, `VxBindTagHelper` type-checks those expressions at render time.
 
@@ -148,7 +148,7 @@ This is the framework's philosophy in one example: the *transport* is declarativ
 
 | Case | Behaviour |
 |---|---|
-| Fast typist outruns the network | `vx-debounce` coalesces; `vx-sync="replace"` (the default) aborts the in-flight request; `VX-Sequence` discards any stale response that still arrives |
+| Fast typist outruns the network | `debounce 200 | distinct` in `vx-on` coalesces bursts and skips unchanged values; `vx-sync="replace"` (the default) aborts the in-flight request; `VX-Sequence` discards any stale response that still arrives |
 | User clears the box | `q` is empty → client disables the submit button immediately and server returns the empty-state partial |
 | Server 500 | `vx:error` fires, the region is left alone, the agent falls back to native form submission if the trigger was the submit button |
 | JavaScript disabled | The form submits, the page renders with results |

@@ -1,0 +1,7 @@
+{
+  "name": "marble_throttle_100ms",
+  "operator": "throttle",
+  "input": "ab-c-d---|",
+  "args": [100],
+  "expect": "a--c-d---|"
+}

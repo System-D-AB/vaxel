@@ -822,6 +822,12 @@
     return evaluateAstNode(parsed.value, makeSignalStoreLookup(extraContext));
   }
 
+  function evaluateBareWithLookup(exprStr, lookup) {
+    var parsed = parseBareExpression(exprStr);
+    if (!parsed.ok) return parsed;
+    return evaluateAstNode(parsed.value, lookup);
+  }
+
   function evaluateTemplateOrExprWithLookup(expression, lookup) {
     var parsed = parseTemplateOrExpr(expression);
     if (!parsed.ok) return parsed;
@@ -869,6 +875,28 @@
         try { el.__vxEffects[i](); } catch (_) {}
       }
       el.__vxEffects = null;
+    }
+  }
+
+  function disposeElementOn(el) {
+    if (el && el.__vxDisposeOn) {
+      try { el.__vxDisposeOn(); } catch (_) {}
+      el.__vxDisposeOn = null;
+      el.__vxOnBound = null;
+    }
+  }
+
+  function disposeSubtree(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+    var nodes = [node].concat(node.querySelectorAll ? Array.from(node.querySelectorAll('*')) : []);
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      disposeElementEffects(el);
+      disposeElementOn(el);
+      if (inFlightRequests.has(el)) {
+        try { inFlightRequests.get(el).abort(); } catch (_) {}
+        inFlightRequests.delete(el);
+      }
     }
   }
 
@@ -1052,12 +1080,284 @@
           })(val);
         }
       }
+
+      if (el.hasAttribute('vx-on')) {
+        bindVxOn(el, el.getAttribute('vx-on') || '');
+      } else if (el.__vxDisposeOn) {
+        disposeElementOn(el);
+      }
     });
+  }
+
+  function splitVxOnChain(str) {
+    var parts = [];
+    var cur = '';
+    var quote = null;
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      if (quote) {
+        cur += ch;
+        if (ch === '\\' && i + 1 < str.length) {
+          cur += str[++i];
+        } else if (ch === quote) {
+          quote = null;
+        }
+      } else if (ch === '\'' || ch === '"') {
+        quote = ch;
+        cur += ch;
+      } else if (ch === '|' && str[i + 1] !== '|' && (i === 0 || str[i - 1] !== '|')) {
+        parts.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    if (cur.trim()) parts.push(cur.trim());
+    return parts;
+  }
+
+  function makeEventLookup(el, evt) {
+    return function (name) {
+      if (name === 'key') {
+        return exprOk(evt && typeof evt.key === 'string' ? evt.key : '');
+      }
+      if (name === 'value') {
+        var targetVal = evt && evt.target && evt.target.value !== undefined
+          ? evt.target.value
+          : (el && el.value !== undefined ? el.value : '');
+        return exprOk(targetVal !== null && targetVal !== undefined ? String(targetVal) : '');
+      }
+      if (name === 'checked') {
+        var targetChecked = evt && evt.target && typeof evt.target.checked === 'boolean'
+          ? evt.target.checked
+          : Boolean(el && el.checked);
+        return exprOk(targetChecked);
+      }
+      return exprOk(readSignalTracked(name));
+    };
+  }
+
+  function bindVxOn(el, chainStr) {
+    var trimmed = (chainStr || '').trim();
+    if (!trimmed) {
+      disposeElementOn(el);
+      return;
+    }
+    if (el.__vxOnBound === trimmed) {
+      return;
+    }
+    disposeElementOn(el);
+    el.__vxOnBound = trimmed;
+
+    var stages = splitVxOnChain(trimmed);
+    if (stages.length === 0) return;
+
+    var activeTimers = new Set();
+    var activeIntervals = new Set();
+    var cleanups = [];
+
+    el.__vxDisposeOn = function () {
+      activeTimers.forEach(function (id) { clearTimeout(id); });
+      activeTimers.clear();
+      activeIntervals.forEach(function (id) { clearInterval(id); });
+      activeIntervals.clear();
+      for (var i = 0; i < cleanups.length; i++) {
+        try { cleanups[i](); } catch (_) {}
+      }
+      cleanups.length = 0;
+    };
+
+    var opStages = stages.slice(1);
+    var sinkFn = null;
+
+    if (opStages.length > 0) {
+      var lastStage = opStages[opStages.length - 1];
+      var setMatch = /^set\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*([\s\S]+)$/.exec(lastStage);
+      if (setMatch) {
+        opStages.pop();
+        var sinkIdent = setMatch[1];
+        var sinkExpr = setMatch[2].trim();
+        sinkFn = function (evt) {
+          var res = evaluateBareWithLookup(sinkExpr, makeEventLookup(el, evt));
+          if (!res.ok) {
+            emitEvent('vx:error', { attribute: 'vx-on', expression: sinkExpr, refusal: res.refusal });
+            return;
+          }
+          setSignal(sinkIdent, res.value);
+        };
+      }
+    }
+
+    if (!sinkFn) {
+      sinkFn = function (evt) {
+        triggerElementRequest(el, evt);
+      };
+    }
+
+    var pipeline = sinkFn;
+
+    for (var s = opStages.length - 1; s >= 0; s--) {
+      var st = opStages[s];
+      var spIdx = st.search(/\s/);
+      var opName = spIdx === -1 ? st : st.substring(0, spIdx);
+      var opArg = spIdx === -1 ? '' : st.substring(spIdx).trim();
+
+      if (opName === 'once') {
+        (function (next) {
+          var fired = false;
+          pipeline = function (evt) {
+            if (fired) return;
+            fired = true;
+            next(evt);
+          };
+        })(pipeline);
+      } else if (opName === 'distinct') {
+        (function (next) {
+          var hasLast = false;
+          var lastVal;
+          pipeline = function (evt) {
+            var curVal = (evt && evt.target && evt.target.value !== undefined)
+              ? evt.target.value
+              : (el.value !== undefined ? el.value : evt);
+            if (hasLast && lastVal === curVal) return;
+            hasLast = true;
+            lastVal = curVal;
+            next(evt);
+          };
+        })(pipeline);
+      } else if (opName === 'prevent') {
+        (function (next) {
+          pipeline = function (evt) {
+            if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
+            next(evt);
+          };
+        })(pipeline);
+      } else if (opName === 'stop') {
+        (function (next) {
+          pipeline = function (evt) {
+            if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
+            next(evt);
+          };
+        })(pipeline);
+      } else if (opName === 'debounce') {
+        (function (next, ms) {
+          var timerId = null;
+          pipeline = function (evt) {
+            if (timerId !== null) {
+              clearTimeout(timerId);
+              activeTimers.delete(timerId);
+            }
+            timerId = setTimeout(function () {
+              activeTimers.delete(timerId);
+              timerId = null;
+              next(evt);
+            }, ms);
+            activeTimers.add(timerId);
+          };
+        })(pipeline, Math.max(0, Number(opArg) || 0));
+      } else if (opName === 'throttle') {
+        (function (next, ms) {
+          var locked = false;
+          pipeline = function (evt) {
+            if (locked) return;
+            locked = true;
+            var timerId = setTimeout(function () {
+              activeTimers.delete(timerId);
+              locked = false;
+            }, ms);
+            activeTimers.add(timerId);
+            next(evt);
+          };
+        })(pipeline, Math.max(0, Number(opArg) || 0));
+      } else if (opName === 'delay') {
+        (function (next, ms) {
+          pipeline = function (evt) {
+            var timerId = setTimeout(function () {
+              activeTimers.delete(timerId);
+              next(evt);
+            }, ms);
+            activeTimers.add(timerId);
+          };
+        })(pipeline, Math.max(0, Number(opArg) || 0));
+      } else if (opName === 'key') {
+        (function (next, expectedKey) {
+          pipeline = function (evt) {
+            if (!evt || evt.key !== expectedKey) return;
+            next(evt);
+          };
+        })(pipeline, opArg);
+      } else if (opName === 'filter') {
+        (function (next, filterExpr) {
+          pipeline = function (evt) {
+            var res = evaluateBareWithLookup(filterExpr, makeEventLookup(el, evt));
+            if (!res.ok) {
+              emitEvent('vx:error', { attribute: 'vx-on', expression: filterExpr, refusal: res.refusal });
+              return;
+            }
+            var truthy = Boolean(res.value && res.value !== '0' && res.value !== 'false');
+            if (!truthy) return;
+            next(evt);
+          };
+        })(pipeline, opArg);
+      } else {
+        emitEvent('vx:error', { attribute: 'vx-on', reason: 'Unknown operator: ' + opName });
+      }
+    }
+
+    // Source stage (stages[0])
+    var srcTokens = stages[0].split(/\s+/).filter(Boolean);
+    var srcName = srcTokens[0];
+    var srcScopes = srcTokens.slice(1);
+
+    if (srcName === 'interval') {
+      var requestedMs = Number(srcTokens[1]);
+      var intervalMs = Math.max(1000, isNaN(requestedMs) ? 1000 : requestedMs);
+      var intId = setInterval(function () {
+        pipeline({ type: 'interval', target: el });
+      }, intervalMs);
+      activeIntervals.add(intId);
+    } else if (srcName === 'load') {
+      pipeline({ type: 'load', target: el });
+    } else if (srcName === 'visible') {
+      if (typeof IntersectionObserver !== 'undefined') {
+        var obs = new IntersectionObserver(function (entries) {
+          for (var ei = 0; ei < entries.length; ei++) {
+            if (entries[ei].isIntersecting) {
+              pipeline({ type: 'visible', target: el, entry: entries[ei] });
+            }
+          }
+        });
+        obs.observe(el);
+        cleanups.push(function () { obs.disconnect(); });
+      }
+    } else if (srcName) {
+      var hasOutside = srcScopes.indexOf('outside') !== -1;
+      var hasWindow = srcScopes.indexOf('window') !== -1;
+      var hasDocument = srcScopes.indexOf('document') !== -1;
+
+      if (hasOutside) {
+        var outsideHandler = function (evt) {
+          if (evt && evt.target && !el.contains(evt.target)) {
+            pipeline(evt);
+          }
+        };
+        document.addEventListener(srcName, outsideHandler);
+        cleanups.push(function () { document.removeEventListener(srcName, outsideHandler); });
+      } else {
+        var listenTarget = hasWindow ? window : (hasDocument ? document : el);
+        var domHandler = function (evt) {
+          pipeline(evt);
+        };
+        listenTarget.addEventListener(srcName, domHandler);
+        cleanups.push(function () { listenTarget.removeEventListener(srcName, domHandler); });
+      }
+    }
   }
 
   // --- 3. DOM Morphing Engine ---
   function morphElement(fromEl, toEl) {
     if (fromEl.nodeType !== toEl.nodeType || fromEl.tagName !== toEl.tagName) {
+      disposeSubtree(fromEl);
       fromEl.replaceWith(toEl);
       return;
     }
@@ -1089,6 +1389,7 @@
     for (var j = fromAttrs.length - 1; j >= 0; j--) {
       var fAttr = fromAttrs[j];
       if (!toEl.hasAttribute(fAttr.name) && preserveAttrs.indexOf(fAttr.name) === -1) {
+        if (fAttr.name === 'vx-on') disposeElementOn(fromEl);
         fromEl.removeAttribute(fAttr.name);
       }
     }
@@ -1157,6 +1458,7 @@
           advanceFrom = false;
         }
       } else {
+        disposeSubtree(fromChild);
         fromEl.replaceChild(toChild, fromChild);
       }
 
@@ -1170,6 +1472,7 @@
     while (fromChild) {
       var removeMe = fromChild;
       fromChild = fromChild.nextSibling;
+      disposeSubtree(removeMe);
       fromEl.removeChild(removeMe);
     }
   }
@@ -1226,6 +1529,7 @@
 
       case 'replace':
         if (fragment.firstElementChild) {
+          disposeSubtree(targetEl);
           targetEl.replaceWith(fragment.firstElementChild);
         }
         break;
@@ -1268,6 +1572,7 @@
 
       case 'remove':
         if (targetEl.parentNode) {
+          disposeSubtree(targetEl);
           targetEl.parentNode.removeChild(targetEl);
         }
         break;
@@ -1447,6 +1752,51 @@
   var inFlightRequests = new Map(); // trigger -> AbortController
   var sequenceCounter = 0;
 
+  function hasHttpVerbAttribute(el) {
+    return Boolean(el && el.hasAttribute && (
+      el.hasAttribute('vx-get') ||
+      el.hasAttribute('vx-post') ||
+      el.hasAttribute('vx-put') ||
+      el.hasAttribute('vx-patch') ||
+      el.hasAttribute('vx-delete')
+    ));
+  }
+
+  function triggerElementRequest(el, evt) {
+    var requestEl = el;
+    if (!hasHttpVerbAttribute(requestEl)) {
+      var parentForm = el.form || (el.closest ? el.closest('form') : null);
+      if (parentForm && hasHttpVerbAttribute(parentForm)) {
+        requestEl = parentForm;
+      } else {
+        return;
+      }
+    }
+
+    var confirmMsg = el.getAttribute('vx-confirm') || (requestEl !== el ? requestEl.getAttribute('vx-confirm') : null);
+    if (confirmMsg && !window.confirm(confirmMsg)) {
+      if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
+      return;
+    }
+
+    var method = (requestEl instanceof HTMLFormElement) ? 'POST' : 'GET';
+    var url = requestEl.getAttribute('href') || requestEl.getAttribute('action') || window.location.href;
+    ['vx-get', 'vx-post', 'vx-put', 'vx-patch', 'vx-delete'].forEach(function (attr) {
+      if (requestEl.hasAttribute(attr)) {
+        method = attr.substring(3).toUpperCase();
+        var customUrl = requestEl.getAttribute(attr);
+        if (customUrl) url = customUrl;
+      }
+    });
+
+    if (evt && typeof evt.preventDefault === 'function' &&
+        (evt.type === 'submit' || (evt.type === 'click' && (requestEl.tagName === 'A' || requestEl.tagName === 'BUTTON')))) {
+      evt.preventDefault();
+    }
+
+    executeRequest(requestEl, method, url);
+  }
+
   function executeRequest(el, method, url) {
     method = (method || 'GET').toUpperCase();
     var syncPolicy = el.getAttribute('vx-sync') || 'replace';
@@ -1476,14 +1826,37 @@
 
     // Indicators & Disables
     var indicatorEl = null;
-    var indicatorSel = el.getAttribute('vx-indicator');
-    if (indicatorSel) indicatorEl = document.querySelector(indicatorSel);
+    var indicatorSig = null;
+    var indicatorSel = (el.getAttribute('vx-indicator') || '').trim();
+    if (indicatorSel) {
+      if (isSimpleIdentifier(indicatorSel) && Object.prototype.hasOwnProperty.call(signalCells, indicatorSel)) {
+        indicatorSig = indicatorSel;
+        setSignal(indicatorSig, true);
+      } else {
+        try { indicatorEl = document.querySelector(indicatorSel); } catch (_) {}
+        if (!indicatorEl && isSimpleIdentifier(indicatorSel)) {
+          indicatorSig = indicatorSel;
+          setSignal(indicatorSig, true);
+        }
+      }
+    }
     if (indicatorEl) {
       indicatorEl.classList.add('vx-loading');
       indicatorEl.setAttribute('aria-busy', 'true');
     }
     var disableTarget = el.hasAttribute('vx-disable');
     if (disableTarget) el.disabled = true;
+
+    function clearIndicators() {
+      if (indicatorEl) {
+        indicatorEl.classList.remove('vx-loading');
+        indicatorEl.removeAttribute('aria-busy');
+      }
+      if (indicatorSig) {
+        setSignal(indicatorSig, false);
+      }
+      if (disableTarget) el.disabled = false;
+    }
 
     // Headers
     var headers = {
@@ -1528,8 +1901,11 @@
           headers['Content-Type'] = 'application/x-www-form-urlencoded';
         }
       } else {
-        // Collect vx-vals-*
+        // Collect vx-vals-* (and input name/value if el is a form control)
         var vals = new URLSearchParams();
+        if (el.name && (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) {
+          vals.set(el.name, el.type === 'checkbox' ? String(el.checked) : el.value);
+        }
         for (var i = 0; i < el.attributes.length; i++) {
           var a = el.attributes[i];
           if (a.name.startsWith('vx-vals-')) {
@@ -1556,6 +1932,9 @@
           getUrl.searchParams.append(k, typeof v === 'string' ? v : '');
         });
       } else {
+        if (el.name && (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) {
+          getUrl.searchParams.set(el.name, el.type === 'checkbox' ? String(el.checked) : el.value);
+        }
         for (var gi = 0; gi < el.attributes.length; gi++) {
           var ga = el.attributes[gi];
           if (ga.name.indexOf('vx-vals-') === 0) {
@@ -1569,8 +1948,7 @@
     var evtDetail = { url: url, method: method, headers: headers, body: body };
     if (!emitEvent('vx:before-request', evtDetail, true)) {
       inFlightRequests.delete(el);
-      if (indicatorEl) indicatorEl.classList.remove('vx-loading');
-      if (disableTarget) el.disabled = false;
+      clearIndicators();
       return;
     }
 
@@ -1581,11 +1959,13 @@
       signal: abortCtrl.signal
     }).then(function (res) {
       inFlightRequests.delete(el);
-      if (indicatorEl) {
-        indicatorEl.classList.remove('vx-loading');
-        indicatorEl.removeAttribute('aria-busy');
+      clearIndicators();
+
+      // US-3 (takeUntil morph): if the request was aborted or the trigger element was
+      // removed from the document while in flight, abandon the response.
+      if (abortCtrl.signal.aborted || !document.body.contains(el)) {
+        return;
       }
-      if (disableTarget) el.disabled = false;
 
       // Check protocol major version
       var resProto = res.headers.get('VX-Protocol');
@@ -1597,17 +1977,14 @@
       var contentType = res.headers.get('Content-Type') || '';
       if (contentType.indexOf('text/vnd.vaxel-patch+html') !== -1) {
         return res.text().then(function (html) {
+          if (abortCtrl.signal.aborted || !document.body.contains(el)) return;
           processPatchDocument(html, true, el);
         });
       }
       window.location.href = url;
     }).catch(function (err) {
       inFlightRequests.delete(el);
-      if (indicatorEl) {
-        indicatorEl.classList.remove('vx-loading');
-        indicatorEl.removeAttribute('aria-busy');
-      }
-      if (disableTarget) el.disabled = false;
+      clearIndicators();
       if (err.name !== 'AbortError') {
         emitEvent('vx:error', { error: err });
       }
@@ -1618,54 +1995,16 @@
   function initTriggers() {
     document.addEventListener('click', function (e) {
       var trigger = e.target.closest('a[vx-get], a[vx-post], a[vx-put], a[vx-patch], a[vx-delete], button[vx-get], button[vx-post], button[vx-put], button[vx-patch], button[vx-delete]');
-      if (!trigger) return;
-
-      var confirmMsg = trigger.getAttribute('vx-confirm');
-      if (confirmMsg && !window.confirm(confirmMsg)) {
-        e.preventDefault();
-        return;
-      }
-
-      var method = 'GET';
-      var url = trigger.getAttribute('href') || window.location.href;
-      ['vx-get', 'vx-post', 'vx-put', 'vx-patch', 'vx-delete'].forEach(function (attr) {
-        if (trigger.hasAttribute(attr)) {
-          method = attr.substring(3).toUpperCase();
-          var customUrl = trigger.getAttribute(attr);
-          if (customUrl) url = customUrl;
-        }
-      });
-
-      e.preventDefault();
-      executeRequest(trigger, method, url);
+      if (!trigger || trigger.hasAttribute('vx-on')) return;
+      triggerElementRequest(trigger, e);
     });
 
     document.addEventListener('submit', function (e) {
       var form = e.target;
-      if (!form.hasAttribute('vx-post') && !form.hasAttribute('vx-get') &&
-          !form.hasAttribute('vx-put') && !form.hasAttribute('vx-patch') &&
-          !form.hasAttribute('vx-delete')) {
+      if (!hasHttpVerbAttribute(form) || form.hasAttribute('vx-on')) {
         return;
       }
-
-      var confirmMsg = form.getAttribute('vx-confirm');
-      if (confirmMsg && !window.confirm(confirmMsg)) {
-        e.preventDefault();
-        return;
-      }
-
-      var method = 'POST';
-      var url = form.getAttribute('action') || window.location.href;
-      ['vx-get', 'vx-post', 'vx-put', 'vx-patch', 'vx-delete'].forEach(function (attr) {
-        if (form.hasAttribute(attr)) {
-          method = attr.substring(3).toUpperCase();
-          var customUrl = form.getAttribute(attr);
-          if (customUrl) url = customUrl;
-        }
-      });
-
-      e.preventDefault();
-      executeRequest(form, method, url);
+      triggerElementRequest(form, e);
     });
 
     // Popstate History Restore
@@ -1749,6 +2088,7 @@
     subscribe: subscribeSignal,
     applyPatch: applyPatch,
     processDocument: processPatchDocument,
+    _applyPatchXml: function (html) { processPatchDocument(html, false, null); },
     _signal: signal,
     _effect: effect,
     _read: readSignalTracked,

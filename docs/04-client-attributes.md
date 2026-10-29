@@ -24,33 +24,67 @@ Attributes are written in Razor through Tag Helpers ([05 — .NET API](05-dotnet
 |---|---|---|---|
 | `vx-get` | ✅ | URL | Issue a GET. On `<a>`, defaults to the element's `href`. A `vx-get` **form** sends its fields as the query string |
 | `vx-post` | ✅ | URL | POST. On `<form>`, defaults to `action`; also `vx-put`, `vx-patch`, `vx-delete` |
-| `vx-on` | ⬜ | event name | Which event fires the request. Defaults: `click` on `<a>`/`<button>`, `submit` on `<form>`, `change` on `<select>`/checkbox/radio, `input` on text inputs |
+| `vx-on` | ✅ | chain | Declarative event stream pipeline (`source \| operator... \| sink`). Defaults when omitted: `click` on `<a>`/`<button>`, `submit` on `<form>` |
 | `vx-target` | ✅ | `#id` | Advisory target sent as `VX-Target`; the server decides what it patches |
 | `vx-swap` | ⬜ | mode | Advisory default mode for the response |
 | `vx-vals-*` | ✅ | literal | `vx-vals-tab="submissions"` contributes a `tab=submissions` field — a body field for state-changing methods, a query-string field for GET. Literals only |
 | `vx-include` | ⬜ | `#id` | Also send the fields of this form or container |
 | `vx-confirm` | ✅ | text | Native confirm before sending. Plain text, never markup |
-| `vx-indicator` | ✅ | signal name | Sets that signal `true` while a request from this trigger is in flight, `false` after — so **any** element can react through `vx-attr` / `vx-class` / `vx-show`, not just a nearby spinner |
+| `vx-indicator` | ✅ | signal name or `#id` | Sets that signal `true` (or toggles `.vx-loading` / `aria-busy` on `#id`) while a request from this trigger is in flight, `false` after — so **any** element can react through `vx-attr` / `vx-class` / `vx-show`, not just a nearby spinner |
 | `vx-disable` | ✅ | — or `#id` | Disable this element (or that one) while in flight |
 | `vx-sync` | ✅ | policy | How concurrent requests from this trigger behave: `replace` (default) · `queue` · `drop` · `abort`. See [03 — Concurrency](03-protocol.md#concurrency) |
 | `vx-encoding` | ✅ | `json` | Send an `application/json` body instead of form encoding, for endpoints using `[FromBody]` |
 
-### Trigger modifiers
+### Trigger chains (`vx-on`)
 
-Every modifier below is **not in the 1.0 bundle** (⬜); they land with `v1.1-triggers`.
+Instead of scattering a dozen separate modifier attributes across an element, `vx-on` expresses the event source, stream operators, and sink as one left-to-right pipeline separated by `|`:
 
-| Attribute | 1.0 | Effect |
+```ebnf
+chain     = source { "|" operator } [ "|" sink ] ;
+source    = event [ scope ] | "interval" int | "visible" | "load" ;
+scope     = "window" | "document" | "outside" ;
+operator  = "debounce" int
+          | "throttle" int
+          | "delay" int
+          | "once"
+          | "distinct"
+          | "key" keyname
+          | "filter" expr
+          | "prevent"
+          | "stop" ;
+sink      = "set" ident "=" expr ;
+```
+
+#### Sources & scopes
+
+| Source / Scope | Status | Meaning |
 |---|---|---|
-| `vx-debounce` / `vx-throttle` | ⬜ | ms; coalesce or rate-limit. `vx-debounce-leading` fires on the leading edge instead |
-| `vx-delay` | ⬜ | ms to wait before sending |
-| `vx-once` | ⬜ | Fire at most once, then the trigger is inert |
-| `vx-prevent` / `vx-stop` | ⬜ | `preventDefault` / `stopPropagation` |
-| `vx-capture` / `vx-passive` | ⬜ | Listener options |
-| `vx-window` / `vx-document` | ⬜ | Attach the listener to `window`/`document` instead of the element — how a shell binds Escape to close a panel |
-| `vx-outside` | ⬜ | Fire when the event occurs *outside* this element — click-away to dismiss |
-| `vx-trigger-load` (+ `vx-trigger-load-delay`) | ⬜ | Fire when the element enters the document (lazy regions) |
-| `vx-trigger-visible` (+ `-threshold`, `-exit`, `-once`) | ⬜ | Fire on viewport intersection; threshold is a number 0–1 |
-| `vx-poll` | ⬜ | ms; repeat while the element exists. 1 s floor. Prefer SSE |
+| `<event>` (`input`, `click`, `keydown`, `submit`, `change`, …) | ✅ | Listen for DOM `<event>` on the element (or on `window` / `document` when scoped) |
+| `<event> window` / `<event> document` | ✅ | Attach listener to `window` or `document` instead of the element — e.g. `vx-on="keydown window \| key Escape \| set open = false"` |
+| `<event> outside` | ✅ | Fire when `<event>` occurs outside this element — click-away to dismiss (`vx-on="click outside \| set menuOpen = false"`) |
+| `interval <ms>` | ✅ | Periodic timer while the element remains in the DOM. Enforces a **1000 ms floor** (`interval 200` runs at `1000 ms`). Prefer SSE |
+| `visible` | ✅ | Fires when the element intersects the viewport (`IntersectionObserver`), commonly paired with `\| once` for lazy regions |
+| `load` | ✅ | Fires once when the element is bound into the document |
+
+#### Stream operators (with 50 ms frame marble semantics)
+
+| Operator | Status | Marble (50 ms/frame) | Effect |
+|---|---|---|---|
+| `debounce <ms>` | ✅ | `a-b-c----\|` → `------c--\|` (`100`) | Coalesce bursts; emit only after `<ms>` of silence |
+| `throttle <ms>` | ✅ | `abc---def\|` → `a-c---d-f\|` (`100`) | Leading-edge rate limit; drop events for `<ms>` after each emission |
+| `delay <ms>` | ✅ | `a-b---c--\|` → `--a-b---c\|` (`100`) | Shift each passing event forward in time by `<ms>` |
+| `once` | ✅ | `a-b-c----\|` → `a--------\|` | Pass the first reaching event, then silence the pipeline |
+| `distinct` | ✅ | `a-a-b-b-a\|` → `a---b---a\|` | Drop consecutive duplicate values (`event.target.value`) |
+| `key <KeyName>` | ✅ | — | Pass only when `KeyboardEvent.key === "<KeyName>"` (`Enter`, `Escape`, …) |
+| `filter <expr>` | ✅ | — | Pass only when `<expr>` evaluates to `true` via the P1 expression engine over signals + event `key`, `value`, `checked` |
+| `prevent` / `stop` | ✅ | — | Call `event.preventDefault()` / `event.stopPropagation()` at that stage in the pipeline |
+
+#### Sinks
+
+- **Default sink (request):** when a chain does not end with `set`, a passing event fires the element's HTTP verb (`vx-get`, `vx-post`, `vx-put`, `vx-patch`, `vx-delete`), or its enclosing `<form>`'s HTTP verb when `vx-on` is placed on a form control (`<input name="q" vx-on="input | debounce 200 | distinct">`).
+- **Signal sink (`set <ident> = <expr>`):** evaluates `<expr>` through the closed expression engine (with access to all signals plus event `key`, `value`, `checked`) and writes the result into signal `<ident>` (`vx-on="keydown window | key Escape | set open = false"`).
+
+> **Note on 1.0 draft modifier names:** The earlier draft listed standalone modifier attributes (`vx-debounce`, `vx-throttle`, `vx-delay`, `vx-once`, `vx-prevent`, `vx-stop`, `vx-window`, `vx-document`, `vx-outside`, `vx-trigger-load`, `vx-trigger-visible`, `vx-poll`, and `vx-signal-set:*`). All of those are unified into `vx-on` chains; the optional `vx-compat` shim translates legacy standalone attributes into `vx-on`.
 
 **The degradation rule.** A trigger may only be placed on an element the browser would already action — `<a href>`, `<form>`, or a `<button>` inside a form — except `vx-trigger-load`, `vx-trigger-visible`, `vx-poll` and `vx-window`/`vx-document` listeners, which must target a region that also renders server-side on first paint. There is no attribute that makes a `<div>` clickable; that would break R3 and accessibility in one move.
 

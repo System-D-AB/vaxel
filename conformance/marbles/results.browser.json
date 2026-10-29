@@ -1,0 +1,32 @@
+{
+  "debounce": {
+    "name": "marble_debounce_100ms",
+    "pass": true,
+    "expect": "---b---c-|",
+    "actual": "---b---c-|"
+  },
+  "delay": {
+    "name": "marble_delay_100ms",
+    "pass": true,
+    "expect": "--a-b----|",
+    "actual": "--a-b----|"
+  },
+  "distinct": {
+    "name": "marble_distinct",
+    "pass": true,
+    "expect": "a---b---a|",
+    "actual": "a---b---a|"
+  },
+  "once": {
+    "name": "marble_once",
+    "pass": true,
+    "expect": "-a-------|",
+    "actual": "-a-------|"
+  },
+  "throttle": {
+    "name": "marble_throttle_100ms",
+    "pass": true,
+    "expect": "a--c-d---|",
+    "actual": "a--c-d---|"
+  }
+}

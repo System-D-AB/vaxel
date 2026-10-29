@@ -118,4 +118,47 @@ public sealed class WorkbenchJourneyTests : IAsyncLifetime
         await Assertions.Expect(_page.Locator("#notices")).ToContainTextAsync("Action Refused");
         await Assertions.Expect(_page.Locator("#sub-101")).ToContainTextAsync("Pending");
     }
+
+    [Fact]
+    public async Task ReplacedPane_AbandonsInFlightTriggerRequest_TakeUntilMorph()
+    {
+        await WorkbenchPage.GotoAsync(_page, _fx.BaseAddress);
+        await WorkbenchPage.ClickTabAsync(_page, "proposals");
+        await Assertions.Expect(_page.Locator("#pane h3")).ToHaveTextAsync("Project Proposals");
+
+        var editStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseEdit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await _page.RouteAsync("**/proposals/201/edit*", async route =>
+        {
+            editStarted.TrySetResult();
+            await releaseEdit.Task;
+            try
+            {
+                await route.FulfillAsync(new RouteFulfillOptions
+                {
+                    Status = 200,
+                    ContentType = "text/vnd.vaxel-patch+html",
+                    Headers = new Dictionary<string, string> { ["VX-Protocol"] = "1" },
+                    Body = "<vx-patch target=\"#pane\" mode=\"morph\"><section id=\"pane\" vx-region><h3>STALE EDIT PANE</h3></section></vx-patch>"
+                });
+            }
+            catch
+            {
+                // Request may already be aborted by the browser when takeUntil aborts the AbortController.
+            }
+        });
+
+        await _page.GetByRole(AriaRole.Link, new() { Name = "Edit Proposal" }).ClickAsync();
+        await editStarted.Task;
+
+        // Morph #pane to Submissions while the trigger inside Proposals #pane is still in flight
+        await WorkbenchPage.ClickTabAsync(_page, "submissions");
+        await Assertions.Expect(_page.Locator("#pane h3")).ToHaveTextAsync("Submissions");
+
+        // Let the slow response finish if not already aborted; #pane must remain Submissions
+        releaseEdit.TrySetResult();
+        await _page.WaitForTimeoutAsync(100);
+        await Assertions.Expect(_page.Locator("#pane h3")).ToHaveTextAsync("Submissions");
+    }
 }

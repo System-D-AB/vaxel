@@ -348,6 +348,89 @@ public sealed class TagHelperTests : IClassFixture<ComposerApiFactory>
         Assert.Equal("X-My-CSRF", output.Attributes["data-header"].Value?.ToString());
     }
 
+    [Theory]
+    [InlineData("input | debounce 200 | distinct")]
+    [InlineData("keydown window | key Escape | set open = false")]
+    [InlineData("visible | once")]
+    [InlineData("load | set initialized = true")]
+    [InlineData("interval 5000")]
+    [InlineData("input | filter len(value) >= 2 && key != 'Escape' | debounce 200")]
+    [InlineData("click outside | set menuOpen = false")]
+    [InlineData("keydown | key Enter | prevent | stop | set count = count + 1")]
+    public void VxOn_ValidChains_Accepted(string validChain)
+    {
+        var tagHelper = new VxOnTagHelper { VxOn = validChain };
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("input", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        tagHelper.Process(context, output);
+
+        Assert.Equal(validChain, output.Attributes["vx-on"].Value);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("input | bogus 100")]
+    [InlineData("input | debounce fast")]
+    [InlineData("input | debounce -5")]
+    [InlineData("interval")]
+    [InlineData("interval 0")]
+    [InlineData("visible window")]
+    [InlineData("click badscope")]
+    [InlineData("input | filter 42 + 1")]
+    [InlineData("input | filter foo()")]
+    [InlineData("input | set open = false | once")]
+    [InlineData("input | set 123 = true")]
+    [InlineData("input | once 1")]
+    [InlineData("input | | distinct")]
+    public void VxOn_InvalidChains_RejectedWithSpan(string invalidChain)
+    {
+        var tagHelper = new VxOnTagHelper { VxOn = invalidChain };
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("input", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        var ex = Assert.Throws<VaxelTagHelperException>(() => tagHelper.Process(context, output));
+        Assert.Contains("span", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void VxOn_WithRegisteredSignalSchema_ValidatesFilterAndSetTypes()
+    {
+        var options = new VaxelOptions
+        {
+            SignalSchema = new SignalSchema<SampleTriggerSignals>()
+        };
+        var optsWrapper = Microsoft.Extensions.Options.Options.Create(options);
+
+        // Valid chain against schema + event props (value, key, checked)
+        var validHelper = new VxOnTagHelper(optsWrapper)
+        {
+            VxOn = "input | filter len(value) >= minLen | set query = trim(value)"
+        };
+        var context = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("input", [], (useCachedResult, encoder) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        validHelper.Process(context, output);
+        Assert.Equal("input | filter len(value) >= minLen | set query = trim(value)", output.Attributes["vx-on"].Value);
+
+        // Unknown signal in set sink
+        var unknownTargetHelper = new VxOnTagHelper(optsWrapper)
+        {
+            VxOn = "click | set nonexistent = 'x'"
+        };
+        var exUnknown = Assert.Throws<VaxelTagHelperException>(() => unknownTargetHelper.Process(context, output));
+        Assert.Contains("nonexistent", exUnknown.Message);
+
+        // Type mismatch in set sink (assigning string to int signal minLen)
+        var mismatchHelper = new VxOnTagHelper(optsWrapper)
+        {
+            VxOn = "click | set minLen = 'not-a-number'"
+        };
+        var exMismatch = Assert.Throws<VaxelTagHelperException>(() => mismatchHelper.Process(context, output));
+        Assert.Contains("expressions.type", exMismatch.Message);
+    }
+
+    private sealed record SampleTriggerSignals(int MinLen, string Query, bool Open);
+
     private static TagHelperOutput RenderAntiforgeryMeta(VaxelOptions options)
     {
         var antiforgery = new StubAntiforgery();

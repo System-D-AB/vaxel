@@ -1,0 +1,7 @@
+{
+  "name": "marble_delay_100ms",
+  "operator": "delay",
+  "input": "a-b------|",
+  "args": [100],
+  "expect": "--a-b----|"
+}

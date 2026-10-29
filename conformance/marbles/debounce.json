@@ -1,0 +1,7 @@
+{
+  "name": "marble_debounce_100ms",
+  "operator": "debounce",
+  "input": "ab---c---|",
+  "args": [100],
+  "expect": "---b---c-|"
+}

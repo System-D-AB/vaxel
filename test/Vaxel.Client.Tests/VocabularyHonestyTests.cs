@@ -16,7 +16,7 @@ public sealed class VocabularyHonestyTests
     private static readonly string[] ImplementedIn10 =
     [
         "vx-get", "vx-post", "vx-put", "vx-patch", "vx-delete",
-        "vx-target", "vx-vals-", "vx-confirm", "vx-indicator", "vx-disable",
+        "vx-on", "vx-target", "vx-vals-", "vx-confirm", "vx-indicator", "vx-disable",
         "vx-sync", "vx-encoding",
         "vx-preserve", "vx-preserve-attr", "vx-overwrite-dirty", "vx-sse",
         "vx-text", "vx-show", "vx-class:", "vx-attr:", "vx-style:", "vx-bind",
@@ -27,7 +27,7 @@ public sealed class VocabularyHonestyTests
     // docs/04, the README and parity/SCOREBOARD.md. Implementing any is a later packet.
     private static readonly string[] NotIn10 =
     [
-        "vx-on", "vx-swap", "vx-include",
+        "vx-swap", "vx-include",
         "vx-debounce", "vx-debounce-leading", "vx-throttle", "vx-delay", "vx-once",
         "vx-prevent", "vx-stop", "vx-capture", "vx-passive",
         "vx-window", "vx-document", "vx-outside",

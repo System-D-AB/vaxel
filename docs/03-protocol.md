@@ -56,7 +56,7 @@ Every request carries `VX-Sequence`, monotonic per trigger. The agent applies a 
 | `drop` | While one is in flight, further triggers are ignored — what a submit button wants |
 | `abort` | The new trigger aborts and does **not** send — an explicit cancel control |
 
-Two *different* triggers patching one region are not sequenced against each other; last response wins. Where that matters, the server should patch both regions from whichever request it handles, so the DOM is consistent by construction rather than by client bookkeeping.
+Two *different* triggers patching one region are not sequenced against each other; last response wins — **except when a patch removes an in-flight trigger's subtree from the document (`takeUntil` the morph)**. When a region is morphed or replaced and an element inside it had an in-flight request, the agent aborts that request and abandons its response so a superseded screen cannot overwrite the new one. Where two surviving triggers outside the region compete, the server should patch both regions from whichever request it handles, so the DOM is consistent by construction rather than by client bookkeeping.
 
 An SSE patch never supersedes an in-flight request's target: if a push arrives for a region with a pending request, it is applied, and the pending response then overwrites it. The server is the arbiter of truth in both cases.
 

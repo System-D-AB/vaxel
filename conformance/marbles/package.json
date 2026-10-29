@@ -1,0 +1,11 @@
+{
+  "name": "vaxel-marbles-conformance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

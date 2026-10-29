@@ -22,11 +22,12 @@ Suite last run:     dotnet test
 | Datastar SDK conformance cases passing | **16 / 20** | **16 / 20** (100 % of non-declined) |
 | …declined with a stated reason | **4** (`executeScript*`) | **4** (`executeScript*` per Rule R2) |
 | …failing | **0** | **0** |
-| Attribute plugins at Full parity | **13 / 17** | **8 / 17** in the 1.0 agent (5 ⬜ await v1.1-triggers) |
+| Attribute plugins at Full parity | **13 / 17** | **12 / 17** in the shipped agent (1 ⬜ `vx-debug-signals`) |
 | Attribute plugins at Outcome parity | **4 / 17** | **4 / 17** |
-| Pro attributes matched | **9 / 10** | **7 / 10** in the 1.0 agent (2 ⬜ await v1.1-triggers; 1 Partial: `on-resize`) |
-| Actions matched | **4 / 4** | **2 Full + 2 Outcome-via-`vx-signals`** in the 1.0 agent |
+| Pro attributes matched | **9 / 10** | **7 / 10** in the shipped agent (2 ⬜ `vx-match-media`, `vx-transition-name`; 1 Partial: `on-resize`) |
+| Actions matched | **4 / 4** | **4 / 4** (`fetch`, `peek`, and `set` sink in `vx-on` / `<vx-signals>`) |
 | Expressions corpus (client eval + server AST/type parity) | **312 / 312** | **312 / 312** (305 lifted + 7 vaxel additions; 0 failing) |
+| Trigger operators (`vx-on` marble & stream suite) | **5 / 5** | **5 / 5** (`debounce`, `throttle`, `delay`, `once`, `distinct`; 0 failing) |
 | Example corpus expressible | **100 %** | pending re-score against the honest 1.0 vocabulary |
 
 ## Datastar SDK conformance (`sdk/test`, 20 cases)
@@ -66,17 +67,32 @@ Suite last run:     dotnet test
 | `computed` | server-computed signal | 🟡 Outcome (+1 round trip) | 🟡 Outcome (+1 round trip) |
 | `effect` | island on `vx:signals-changed` | 🟡 Outcome (island) | 🟡 Outcome (island) |
 | `indicator` | `vx-indicator` | ✅ Full | ✅ Full |
-| `init` | `vx-signals` + `vx-trigger-load` | ✅ Full | ⬜ not in 1.0 (`vx-trigger-load` absent; `vx-signals` ✅) |
+| `init` | `vx-signals` + `vx-on="load"` | ✅ Full | ✅ Full |
 | `jsonSignals` | `vx-debug-signals` | ✅ Full | ⬜ not in 1.0 (`vx-debug-signals` absent) |
-| `on` | `vx-on` + modifiers | ✅ Full | ⬜ not in 1.0 (`vx-on` absent) |
-| `onIntersect` | `vx-trigger-visible` | ✅ Full | ⬜ not in 1.0 (`vx-trigger-visible` absent) |
-| `onInterval` | `vx-poll` | ✅ Full | ⬜ not in 1.0 (`vx-poll` absent) |
+| `on` | `vx-on` chain (`source \| op... \| sink`) | ✅ Full | ✅ Full |
+| `onIntersect` | `vx-on="visible \| once"` | ✅ Full | ✅ Full |
+| `onInterval` | `vx-on="interval <ms>"` | ✅ Full | ✅ Full |
 | `onSignalPatch` | `vx:signals-changed` | 🟡 Outcome (island) | 🟡 Outcome (island) |
 | `ref` | `querySelector` in an island | 🟡 Outcome (island) | 🟡 Outcome (island) |
 | `show` | `vx-show` | ✅ Full | ✅ Full |
 | `signals` | `vx-signals` family | ✅ Full | ✅ Full |
 | `style` | `vx-style:<p>` | ✅ Full | ✅ Full |
 | `text` | `vx-text` | ✅ Full | ✅ Full |
+
+## Operators (`vx-on` marble & stream conformance)
+
+| Operator | Marble fixture / suite | Client (`vaxel.js`) | Server (`VxOnTagHelper`) |
+|---|---|---|---|
+| `debounce <ms>` | `conformance/marbles/debounce.json` (`a-b-c----\|` → `------c--\|`) | ✅ Pass | ✅ Validated |
+| `throttle <ms>` | `conformance/marbles/throttle.json` (`abc---def\|` → `a-c---d-f\|`) | ✅ Pass | ✅ Validated |
+| `delay <ms>` | `conformance/marbles/delay.json` (`a-b---c--\|` → `--a-b---c\|`) | ✅ Pass | ✅ Validated |
+| `once` | `conformance/marbles/once.json` (`a-b-c----\|` → `a--------\|`) | ✅ Pass | ✅ Validated |
+| `distinct` | `conformance/marbles/distinct.json` (`a-a-b-b-a\|` → `a---b---a\|`) | ✅ Pass | ✅ Validated |
+| `key <KeyName>` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated |
+| `filter <expr>` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated (AST + schema) |
+| `prevent` / `stop` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated |
+| `set <ident> = <expr>` | `conformance/marbles/run.mjs` (`us1-filter-and-set-sink`) | ✅ Pass | ✅ Validated (AST + schema) |
+| `takeUntil` (morph disposal) | `conformance/marbles/run.mjs` (`us3-takeUntil-morph` + `1000-cycles`) | ✅ Pass | — |
 
 ## Pro attributes (10)
 
@@ -99,8 +115,8 @@ Suite last run:     dotnet test
 |---|---|---|---|
 | `fetch` (`@get`/`@post`/…) | `vx-get` / `vx-post` / … | ✅ | ✅ Full |
 | `peek` | internal to the store | ✅ N/A by construction | ✅ Matched |
-| `setAll` | `<vx-signals>` / `vx-signal-set` | ✅ Outcome | 🟡 Outcome via `<vx-signals>` (`vx-signal-set` ⬜ not in 1.0) |
-| `toggleAll` | `<vx-signals>` / `vx-signal-set` | ✅ Outcome | 🟡 Outcome via `<vx-signals>` (`vx-signal-set` ⬜ not in 1.0) |
+| `setAll` | `<vx-signals>` / `vx-on="… \| set <name> = <expr>"` | ✅ Outcome | ✅ Full (`set` sink + `<vx-signals>`) |
+| `toggleAll` | `<vx-signals>` / `vx-on="… \| set <name> = !<name>"` | ✅ Outcome | ✅ Full (`set` sink + `<vx-signals>`) |
 
 ## Ours, not theirs
 

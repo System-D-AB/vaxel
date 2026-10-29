@@ -1,0 +1,7 @@
+{
+  "name": "marble_distinct",
+  "operator": "distinct",
+  "input": "a-a-b-b-a|",
+  "args": [],
+  "expect": "a---b---a|"
+}
