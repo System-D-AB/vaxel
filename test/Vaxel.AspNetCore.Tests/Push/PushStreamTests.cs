@@ -170,6 +170,48 @@ public sealed class PushStreamTests : IClassFixture<ComposerApiFactory>
         Assert.Contains("<div>test</div>", fakeBackplane.LastData);
     }
 
+    [Fact]
+    public async Task ResolveIdentity_AllowsCustomSessionIdentityWithoutClaimsPrincipal()
+    {
+        await using var customFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.Configure<VaxelOptions>(opts =>
+                {
+                    opts.Push.AllowAnonymous = false;
+                    opts.Push.ResolveIdentity = ctx =>
+                    {
+                        if (ctx.Request.Headers.TryGetValue("X-Explorer-Session", out var sessionUser) &&
+                            !string.IsNullOrWhiteSpace(sessionUser))
+                        {
+                            return ValueTask.FromResult<PushIdentity?>(
+                                new PushIdentity(sessionUser.ToString(), new HashSet<string> { "ops" }));
+                        }
+                        return ValueTask.FromResult<PushIdentity?>(null);
+                    };
+                });
+            });
+        });
+
+        using var unauthClient = customFactory.CreateClient();
+        var unauthResponse = await unauthClient.GetAsync("/_vaxel/stream");
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthResponse.StatusCode);
+
+        using var sessionClient = customFactory.CreateClient();
+        sessionClient.DefaultRequestHeaders.Add("X-Explorer-Session", "explorer-alice");
+        await using var stream = await StreamClient.OpenStreamAsync(sessionClient, "/_vaxel/stream");
+
+        var pushChannel = customFactory.Services.GetRequiredService<IPushChannel>();
+        await pushChannel.PushAsync(
+            PushScope.User("explorer-alice"),
+            Patch.Ok().Replace("#status", new Microsoft.AspNetCore.Html.HtmlString("<div id=\"status\">ok</div>")));
+
+        var patch = await stream.NextPatchAsync(TimeSpan.FromSeconds(3));
+        Assert.NotNull(patch);
+        Assert.Contains("ok", patch);
+    }
+
     private sealed class FakeBackplane : IPushBackplane
     {
         public bool PublishCalled { get; private set; }

@@ -180,7 +180,7 @@ await push.PushAsync(PushScope.User(userId),
     Patch.Ok().Inner("#queue-count", await fragments.PartialAsync("_QueueCount", count)));
 ```
 
-`PushScope` is `User`, `Group` or `Broadcast`. The default transport is in-process (one node); an abstraction point (`IPushBackplane`) allows Redis, Postgres `LISTEN/NOTIFY` or a service bus without changing calling code. Scale-out without a backplane is a documented limitation, not a silent one.
+`PushScope` is `User`, `Group` or `Broadcast`. `MapVaxelStream` resolves the caller's identity from `VaxelPushOptions.ResolveIdentity` when configured (for `ISession` or custom headers), falling back to `HttpContext.User` claims (`UserIdClaimType` and `GroupIdClaimType`). The default transport is in-process (one node); an abstraction point (`IPushBackplane`) allows Redis, Postgres `LISTEN/NOTIFY` or a service bus without changing calling code. Scale-out without a backplane is a documented limitation, not a silent one.
 
 ### Push pipelines (`push.From(source)`)
 

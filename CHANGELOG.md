@@ -2,6 +2,16 @@
 
 The specification is versioned because it is the contract. Every entry says what changed **and why it was wrong**, because a spec that quietly improves teaches nobody.
 
+## v2.0.0-rc2 — 2026-10-29
+
+### `v2.0-bugs` — StowDB Explorer `v2.0.0-rc1` adoption fixes & ergonomic completions
+
+- **B1 — `vx-persist` + `vx-signals-if-missing` on the same element preserves stored values across reload.** In `2.0.0-rc1`, `bindTree()` evaluated `vx-signals-if-missing` (which calls `savePersisted()`) before calling `loadPersisted()`, overwriting `localStorage` / `sessionStorage` with the default seed whenever both attributes sat on `<body>`. `bindTree()` now calls `loadPersisted()` immediately after registering `vx-persist` / `vx-persist-session` / `vx-url-sync` keys and before evaluating `vx-signals-if-missing`. *(docs/04 § Signal state)*
+- **B2 — `VxSignalsTagHelper` and `VxSignalsIfMissingTagHelper` accept dynamic Razor `@json` strings.** Previously neither tag helper bound a C# `string?` property, causing Razor to HTML-encode quotes (`&quot;`) into `output.Attributes` before `VxSignalJson.Validate` parsed the JSON. Both tag helpers now bind `[HtmlAttributeName(...)] public string?` and validate the raw unencoded JSON string. *(docs/05 § Tag Helpers)*
+- **B3 — `vx-sse` dynamic morph discovery and immediate `pagehide` disconnect.** `initSse()` now runs inside `bindTree()` so `[vx-sse]` regions morphed into the DOM open their `EventSource` connection (and removed `[vx-sse]` regions close it), and `window` `pagehide` closes the active `EventSource` immediately so rapid full-page reloads do not exhaust `MaxConnectionsPerIdentity`. *(docs/04 § Regions, morph and lifecycle)*
+- **B4 — `<form vx-get>` with non-submit `vx-on` still intercepts `submit`.** The delegated `submit` (and `click`) listener previously bailed out whenever an element carried any `vx-on` attribute. It now checks whether `vx-on` declares an unscoped `submit` (or `click`) source, so `<form vx-get vx-on="input | debounce 150 | distinct">` still intercepts Enter-key / button form submissions as Vaxel patch requests. *(docs/04 § Trigger chains)*
+- **S1–S4 — Multi-chain `vx-on` (`;`), declarative dialog/focus sinks (`showModal #id`, `close [#id]`, `focus #id`), `dataset.<key>` in expressions, and `VaxelPushOptions.ResolveIdentity`.** `vx-on` now accepts `;`-separated chains and `#id`-validated DOM sinks (`showModal #id`, `close`, `focus #id`); expressions can read `dataset.<ident>` from the bound element; and `MapVaxelStream` consults `VaxelPushOptions.ResolveIdentity` for session- or custom-authenticated streams. *(docs/04, docs/05)*
+
 ## v2.0.0-rc1 — 2026-10-29
 
 ### `v2.0-push-pipelines` (P3) — server push pipelines over `IAsyncEnumerable<T>` & bounded `Bus<T>`

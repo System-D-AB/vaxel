@@ -32,6 +32,9 @@ public sealed partial class VxOnTagHelper : TagHelper
         "prevent",
         "stop",
         "set",
+        "showModal",
+        "close",
+        "focus",
     };
 
     [GeneratedRegex(@"^[a-zA-Z][a-zA-Z0-9:_-]*$", RegexOptions.CultureInvariant)]
@@ -39,6 +42,9 @@ public sealed partial class VxOnTagHelper : TagHelper
 
     [GeneratedRegex(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex IdentifierRegex();
+
+    [GeneratedRegex(@"^#[a-zA-Z_][a-zA-Z0-9:_-]*$", RegexOptions.CultureInvariant)]
+    private static partial Regex TargetIdSelectorRegex();
 
     [HtmlAttributeName("vx-on")]
     public string? VxOn { get; set; }
@@ -76,44 +82,65 @@ public sealed partial class VxOnTagHelper : TagHelper
                 "Provide a source event or pipeline (e.g. vx-on=\"input | debounce 200 | distinct\").");
         }
 
-        var stages = SplitChainStages(raw);
-        if (stages.Count == 0)
+        var chains = SplitChains(raw);
+        if (chains.Count == 0)
         {
             throw new VaxelTagHelperException(
                 "Attribute 'vx-on' has an empty trigger chain at span 0..0.");
         }
 
-        ValidateSourceStage(stages[0], raw);
-
         var eventSchema = new EventContextSignalSchema(_options?.SignalSchema);
 
-        for (var i = 1; i < stages.Count; i++)
+        foreach (var chain in chains)
         {
-            var stage = stages[i];
-            var isLast = i == stages.Count - 1;
-
-            if (IsSetStage(stage.Text))
+            var stages = SplitChainStages(raw, chain.Span.Offset, chain.Span.Offset + chain.Span.Length);
+            if (stages.Count == 0)
             {
-                if (!isLast)
-                {
-                    throw new VaxelTagHelperException(
-                        $"Attribute 'vx-on' has sink '{stage.Text}' at span {stage.Span} before another stage. " +
-                        "A 'set <ident> = <expr>' sink must be the final stage in a vx-on chain.");
-                }
-
-                ValidateSetSink(stage, eventSchema);
+                throw new VaxelTagHelperException(
+                    $"Attribute 'vx-on' has an empty trigger chain at span {chain.Span}.");
             }
-            else
+
+            ValidateSourceStage(stages[0], raw);
+
+            for (var i = 1; i < stages.Count; i++)
             {
-                ValidateOperatorStage(stage, eventSchema);
+                var stage = stages[i];
+                var isLast = i == stages.Count - 1;
+
+                if (IsSetStage(stage.Text))
+                {
+                    if (!isLast)
+                    {
+                        throw new VaxelTagHelperException(
+                            $"Attribute 'vx-on' has sink '{stage.Text}' at span {stage.Span} before another stage. " +
+                            "A 'set <ident> = <expr>' sink must be the final stage in a vx-on chain.");
+                    }
+
+                    ValidateSetSink(stage, eventSchema);
+                }
+                else if (IsDomSinkStage(stage.Text, out var sinkName))
+                {
+                    if (!isLast)
+                    {
+                        throw new VaxelTagHelperException(
+                            $"Attribute 'vx-on' has sink '{stage.Text}' at span {stage.Span} before another stage. " +
+                            $"A '{sinkName}' sink must be the final stage in a vx-on chain.");
+                    }
+
+                    ValidateDomSink(stage, sinkName);
+                }
+                else
+                {
+                    ValidateOperatorStage(stage, eventSchema);
+                }
             }
         }
     }
 
-    private static List<ChainStage> SplitChainStages(string raw)
+    private static List<ChainStage> SplitChains(string raw)
     {
-        var stages = new List<ChainStage>();
-        var stageStart = 0;
+        var chains = new List<ChainStage>();
+        var chainStart = 0;
         char? quote = null;
 
         for (var i = 0; i < raw.Length; i++)
@@ -134,7 +161,62 @@ public sealed partial class VxOnTagHelper : TagHelper
             {
                 quote = ch;
             }
-            else if (ch == '|' && (i + 1 >= raw.Length || raw[i + 1] != '|') && (i == 0 || raw[i - 1] != '|'))
+            else if (ch == ';')
+            {
+                chains.Add(TrimStage(raw, chainStart, i));
+                chainStart = i + 1;
+            }
+        }
+
+        if (quote.HasValue)
+        {
+            throw new VaxelTagHelperException(
+                $"Attribute 'vx-on' has an unterminated string literal in '{raw}' at span {chainStart}..{raw.Length}.");
+        }
+
+        var trailing = TrimStage(raw, chainStart, raw.Length);
+        if (!string.IsNullOrEmpty(trailing.Text) || chains.Count == 0)
+        {
+            chains.Add(trailing);
+        }
+
+        foreach (var chain in chains)
+        {
+            if (string.IsNullOrEmpty(chain.Text))
+            {
+                throw new VaxelTagHelperException(
+                    $"Attribute 'vx-on' contains an empty chain segment in '{raw}' at span {chain.Span}.");
+            }
+        }
+
+        return chains;
+    }
+
+    private static List<ChainStage> SplitChainStages(string raw, int startOffset, int endOffset)
+    {
+        var stages = new List<ChainStage>();
+        var stageStart = startOffset;
+        char? quote = null;
+
+        for (var i = startOffset; i < endOffset; i++)
+        {
+            var ch = raw[i];
+            if (quote.HasValue)
+            {
+                if (ch == '\\' && i + 1 < endOffset)
+                {
+                    i++;
+                }
+                else if (ch == quote.Value)
+                {
+                    quote = null;
+                }
+            }
+            else if (ch is '\'' or '"')
+            {
+                quote = ch;
+            }
+            else if (ch == '|' && (i + 1 >= endOffset || raw[i + 1] != '|') && (i == startOffset || raw[i - 1] != '|'))
             {
                 stages.Add(TrimStage(raw, stageStart, i));
                 stageStart = i + 1;
@@ -144,10 +226,10 @@ public sealed partial class VxOnTagHelper : TagHelper
         if (quote.HasValue)
         {
             throw new VaxelTagHelperException(
-                $"Attribute 'vx-on' has an unterminated string literal in '{raw}' at span {stageStart}..{raw.Length}.");
+                $"Attribute 'vx-on' has an unterminated string literal in '{raw}' at span {stageStart}..{endOffset}.");
         }
 
-        stages.Add(TrimStage(raw, stageStart, raw.Length));
+        stages.Add(TrimStage(raw, stageStart, endOffset));
 
         foreach (var stage in stages)
         {
@@ -233,6 +315,39 @@ public sealed partial class VxOnTagHelper : TagHelper
         text.Equals("set", StringComparison.Ordinal) ||
         text.StartsWith("set ", StringComparison.Ordinal) ||
         text.StartsWith("set\t", StringComparison.Ordinal);
+
+    private static bool IsDomSinkStage(string text, out string sinkName)
+    {
+        foreach (var candidate in new[] { "showModal", "close", "focus" })
+        {
+            if (text.Equals(candidate, StringComparison.Ordinal) ||
+                text.StartsWith(candidate + " ", StringComparison.Ordinal) ||
+                text.StartsWith(candidate + "\t", StringComparison.Ordinal))
+            {
+                sinkName = candidate;
+                return true;
+            }
+        }
+
+        sinkName = string.Empty;
+        return false;
+    }
+
+    private static void ValidateDomSink(ChainStage stage, string sinkName)
+    {
+        var argText = stage.Text[sinkName.Length..].Trim();
+
+        if (sinkName == "close" && string.IsNullOrEmpty(argText))
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(argText) || !TargetIdSelectorRegex().IsMatch(argText))
+        {
+            throw new VaxelTagHelperException(
+                $"Attribute 'vx-on' sink '{stage.Text}' at span {stage.Span} requires a valid '#id' target selector (e.g. '{sinkName} #my-target').");
+        }
+    }
 
     private void ValidateSetSink(ChainStage stage, EventContextSignalSchema eventSchema)
     {

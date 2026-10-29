@@ -40,6 +40,7 @@ Attributes are written in Razor through Tag Helpers ([05 — .NET API](05-dotnet
 Instead of scattering a dozen separate modifier attributes across an element, `vx-on` expresses the event source, stream operators, and sink as one left-to-right pipeline separated by `|`:
 
 ```ebnf
+chains    = chain { ";" chain } ;
 chain     = source { "|" operator } [ "|" sink ] ;
 source    = event [ scope ] | "interval" int | "visible" | "load" ;
 scope     = "window" | "document" | "outside" ;
@@ -52,7 +53,10 @@ operator  = "debounce" int
           | "filter" expr
           | "prevent"
           | "stop" ;
-sink      = "set" ident "=" expr ;
+sink      = "set" ident "=" expr
+          | "showModal" idselector
+          | "close" [ idselector ]
+          | "focus" idselector ;
 ```
 
 #### Sources & scopes
@@ -81,8 +85,9 @@ sink      = "set" ident "=" expr ;
 
 #### Sinks
 
-- **Default sink (request):** when a chain does not end with `set`, a passing event fires the element's HTTP verb (`vx-get`, `vx-post`, `vx-put`, `vx-patch`, `vx-delete`), or its enclosing `<form>`'s HTTP verb when `vx-on` is placed on a form control (`<input name="q" vx-on="input | debounce 200 | distinct">`).
-- **Signal sink (`set <ident> = <expr>`):** evaluates `<expr>` through the closed expression engine (with access to all signals plus event `key`, `value`, `checked`) and writes the result into signal `<ident>` (`vx-on="keydown window | key Escape | set open = false"`).
+- **Default sink (request):** when a chain does not end with an explicit sink, a passing event fires the element's HTTP verb (`vx-get`, `vx-post`, `vx-put`, `vx-patch`, `vx-delete`), or its enclosing `<form>`'s HTTP verb when `vx-on` is placed on a form control (`<input name="q" vx-on="input | debounce 200 | distinct">`).
+- **Signal sink (`set <ident> = <expr>`):** evaluates `<expr>` through the closed expression engine (with access to all signals plus `dataset.<key>` and event `key`, `value`, `checked`) and writes the result into signal `<ident>` (`vx-on="keydown window | key Escape | set open = false"`).
+- **Dialog & focus sinks (`showModal <#id>`, `close [<#id>]`, `focus <#id>`):** invoke native `<dialog>.showModal()` (focusing the first interactive control), `<dialog>.close()` (on `<#id>` or the enclosing `<dialog>`), or `el.focus()` on `<#id>`. Multiple chains on one element are separated by `;` (`vx-on="click | set confirmText = ''; click | showModal #drop-db"`).
 
 > **Note on 1.0 draft modifier names:** The earlier draft listed standalone modifier attributes (`vx-debounce`, `vx-throttle`, `vx-delay`, `vx-once`, `vx-prevent`, `vx-stop`, `vx-window`, `vx-document`, `vx-outside`, `vx-trigger-load`, `vx-trigger-visible`, `vx-poll`, and `vx-signal-set:*`). All of those are unified into `vx-on` chains; the optional `vx-compat` shim translates legacy standalone attributes into `vx-on`.
 

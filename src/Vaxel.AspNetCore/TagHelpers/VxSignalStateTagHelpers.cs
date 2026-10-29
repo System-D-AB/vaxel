@@ -14,11 +14,19 @@ namespace Vaxel.TagHelpers;
 [HtmlTargetElement("*", Attributes = "vx-signals")]
 public sealed class VxSignalsTagHelper : TagHelper
 {
+    [HtmlAttributeName("vx-signals")]
+    public string? Signals { get; set; }
+
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
-        VxSignalJson.Validate(output, "vx-signals");
+        var raw = Signals ?? output.Attributes["vx-signals"]?.Value?.ToString();
+        VxSignalJson.ValidateString(raw, "vx-signals");
+        if (Signals is not null)
+        {
+            output.Attributes.SetAttribute("vx-signals", Signals);
+        }
     }
 }
 
@@ -28,11 +36,19 @@ public sealed class VxSignalsTagHelper : TagHelper
 [HtmlTargetElement("*", Attributes = "vx-signals-if-missing")]
 public sealed class VxSignalsIfMissingTagHelper : TagHelper
 {
+    [HtmlAttributeName("vx-signals-if-missing")]
+    public string? SignalsIfMissing { get; set; }
+
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(output);
-        VxSignalJson.Validate(output, "vx-signals-if-missing");
+        var raw = SignalsIfMissing ?? output.Attributes["vx-signals-if-missing"]?.Value?.ToString();
+        VxSignalJson.ValidateString(raw, "vx-signals-if-missing");
+        if (SignalsIfMissing is not null)
+        {
+            output.Attributes.SetAttribute("vx-signals-if-missing", SignalsIfMissing);
+        }
     }
 }
 
@@ -116,7 +132,12 @@ internal static class VxSignalJson
 {
     public static void Validate(TagHelperOutput output, string attribute)
     {
-        var value = output.Attributes[attribute].Value?.ToString();
+        var value = output.Attributes[attribute]?.Value?.ToString();
+        ValidateString(value, attribute);
+    }
+
+    public static void ValidateString(string? value, string attribute)
+    {
         if (string.IsNullOrWhiteSpace(value))
         {
             return;

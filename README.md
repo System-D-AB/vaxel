@@ -16,7 +16,7 @@ You write Razor Pages, Views, Partials, ViewComponents, and Razor Components. Th
 Apps reference **`Vaxel.AspNetCore`**. That package pulls in the agent and serves `/_vaxel/vaxel.js`.
 
 ```xml
-<PackageReference Include="Vaxel.AspNetCore" Version="2.0.0-rc1" />
+<PackageReference Include="Vaxel.AspNetCore" Version="2.0.0-rc2" />
 ```
 
 ```csharp

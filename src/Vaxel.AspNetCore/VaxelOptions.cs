@@ -27,4 +27,10 @@ public sealed class VaxelPushOptions
     public string GroupIdClaimType { get; set; } = System.Security.Claims.ClaimTypes.Role;
     public TimeSpan IdleStopPeriod { get; set; } = TimeSpan.FromSeconds(30);
     public Action<PushScope, VaxelPushPipelineException>? OnPipelineError { get; set; }
+    public Func<Microsoft.AspNetCore.Http.HttpContext, ValueTask<PushIdentity?>>? ResolveIdentity { get; set; }
 }
+
+/// <summary>
+/// Identity resolved for an SSE stream connection when using <see cref="VaxelPushOptions.ResolveIdentity"/>.
+/// </summary>
+public sealed record PushIdentity(string? UserId, IReadOnlySet<string>? Groups = null);

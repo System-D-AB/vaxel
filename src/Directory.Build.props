@@ -2,7 +2,7 @@
   <Import Project="..\Directory.Build.props" />
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Version>2.0.0-rc1</Version>
+    <Version>2.0.0-rc2</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Authors>vaxel contributors</Authors>
     <Company>System D AB</Company>

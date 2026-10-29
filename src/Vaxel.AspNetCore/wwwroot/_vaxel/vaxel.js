@@ -796,6 +796,29 @@
     };
   }
 
+  function getElementDataset(el) {
+    var ds = {};
+    if (!el) return ds;
+    if (el.dataset) {
+      var keys = Object.keys(el.dataset);
+      for (var i = 0; i < keys.length; i++) {
+        ds[keys[i]] = el.dataset[keys[i]];
+      }
+    }
+    if (el.attributes) {
+      for (var j = 0; j < el.attributes.length; j++) {
+        var a = el.attributes[j];
+        if (a.name.indexOf('data-') === 0 && a.name.length > 5) {
+          var camel = a.name.slice(5).replace(/-([a-z])/g, function (_, c) { return c.toUpperCase(); });
+          if (!Object.prototype.hasOwnProperty.call(ds, camel)) {
+            ds[camel] = a.value;
+          }
+        }
+      }
+    }
+    return ds;
+  }
+
   function makeSignalStoreLookup(extraContext) {
     return function (name) {
       if (extraContext && Object.prototype.hasOwnProperty.call(extraContext, name)) {
@@ -909,7 +932,11 @@
       ? [root].concat(Array.from(root.querySelectorAll(seedSelector)))
       : Array.from(root.querySelectorAll(seedSelector));
     seedEls.forEach(function (el) {
-      // Persist declarations first so patchSignals persists & syncs seeded keys
+      var sigRaw = el.getAttribute('vx-signals');
+      if (sigRaw) {
+        try { patchSignals(JSON.parse(sigRaw), false); } catch (e) { console.error('Invalid vx-signals JSON', e); }
+      }
+
       var persist = el.getAttribute('vx-persist');
       if (persist) {
         persist.trim().split(/\s+/).forEach(function (k) { if (k) persistLocalKeys.add(k); });
@@ -923,15 +950,14 @@
         urlSync.trim().split(/\s+/).forEach(function (k) { if (k) urlSyncKeys.add(k); });
       }
 
-      var sigRaw = el.getAttribute('vx-signals');
-      var ifMissingRaw = el.getAttribute('vx-signals-if-missing');
-      if (sigRaw) {
-        try { patchSignals(JSON.parse(sigRaw), false); } catch (e) { console.error('Invalid vx-signals JSON', e); }
+      if (persist || persistSession || urlSync) {
+        loadPersisted();
       }
+
+      var ifMissingRaw = el.getAttribute('vx-signals-if-missing');
       if (ifMissingRaw) {
         try { patchSignals(JSON.parse(ifMissingRaw), true); } catch (e) { console.error('Invalid vx-signals-if-missing JSON', e); }
       }
-      loadPersisted();
       savePersisted();
       syncUrl();
     });
@@ -959,7 +985,7 @@
         if (isSimpleIdentifier(exprStr)) {
           return exprOk(readSignalTracked(exprStr));
         }
-        var res = evaluateBareTracked(exprStr);
+        var res = evaluateBareTracked(exprStr, { dataset: getElementDataset(el) });
         if (!res.ok) {
           emitEvent('vx:error', { attribute: attrName, expression: exprStr, refusal: res.refusal });
         }
@@ -988,9 +1014,10 @@
                 el.textContent = v !== undefined && v !== null ? String(v) : '';
                 return;
               }
+              var extraCtx = { dataset: getElementDataset(el) };
               var res = hasInterpolation
-                ? evaluateTemplateOrExprWithLookup(exprStr, makeSignalStoreLookup())
-                : evaluateBareTracked(exprStr);
+                ? evaluateTemplateOrExprWithLookup(exprStr, makeSignalStoreLookup(extraCtx))
+                : evaluateBareTracked(exprStr, extraCtx);
               if (!res.ok) {
                 el.textContent = '';
                 emitEvent('vx:error', { attribute: 'vx-text', expression: exprStr, refusal: res.refusal });
@@ -1087,6 +1114,35 @@
         disposeElementOn(el);
       }
     });
+
+    initSse();
+  }
+
+  function splitVxOnChains(str) {
+    var chains = [];
+    var cur = '';
+    var quote = null;
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      if (quote) {
+        cur += ch;
+        if (ch === '\\' && i + 1 < str.length) {
+          cur += str[++i];
+        } else if (ch === quote) {
+          quote = null;
+        }
+      } else if (ch === '\'' || ch === '"') {
+        quote = ch;
+        cur += ch;
+      } else if (ch === ';') {
+        if (cur.trim()) chains.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    if (cur.trim()) chains.push(cur.trim());
+    return chains;
   }
 
   function splitVxOnChain(str) {
@@ -1133,6 +1189,9 @@
           : Boolean(el && el.checked);
         return exprOk(targetChecked);
       }
+      if (name === 'dataset') {
+        return exprOk(getElementDataset(el));
+      }
       return exprOk(readSignalTracked(name));
     };
   }
@@ -1149,8 +1208,8 @@
     disposeElementOn(el);
     el.__vxOnBound = trimmed;
 
-    var stages = splitVxOnChain(trimmed);
-    if (stages.length === 0) return;
+    var chains = splitVxOnChains(trimmed);
+    if (chains.length === 0) return;
 
     var activeTimers = new Set();
     var activeIntervals = new Set();
@@ -1167,12 +1226,25 @@
       cleanups.length = 0;
     };
 
+    for (var c = 0; c < chains.length; c++) {
+      bindSingleVxOnChain(el, chains[c], activeTimers, activeIntervals, cleanups);
+    }
+  }
+
+  function bindSingleVxOnChain(el, singleChainStr, activeTimers, activeIntervals, cleanups) {
+    var stages = splitVxOnChain(singleChainStr);
+    if (stages.length === 0) return;
+
     var opStages = stages.slice(1);
     var sinkFn = null;
 
     if (opStages.length > 0) {
       var lastStage = opStages[opStages.length - 1];
       var setMatch = /^set\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*([\s\S]+)$/.exec(lastStage);
+      var showModalMatch = !setMatch ? /^showModal\s+(#[a-zA-Z_][a-zA-Z0-9:_-]*)$/.exec(lastStage) : null;
+      var closeMatch = !setMatch && !showModalMatch ? /^close(?:\s+(#[a-zA-Z_][a-zA-Z0-9:_-]*))?$/.exec(lastStage) : null;
+      var focusMatch = !setMatch && !showModalMatch && !closeMatch ? /^focus\s+(#[a-zA-Z_][a-zA-Z0-9:_-]*)$/.exec(lastStage) : null;
+
       if (setMatch) {
         opStages.pop();
         var sinkIdent = setMatch[1];
@@ -1184,6 +1256,43 @@
             return;
           }
           setSignal(sinkIdent, res.value);
+        };
+      } else if (showModalMatch) {
+        opStages.pop();
+        var modalSel = showModalMatch[1];
+        sinkFn = function () {
+          var dlg = document.querySelector(modalSel);
+          if (!dlg) return;
+          if (typeof dlg.showModal === 'function') {
+            dlg.showModal();
+          } else {
+            dlg.setAttribute('open', '');
+          }
+          var focusable = dlg.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+          if (focusable && typeof focusable.focus === 'function') {
+            focusable.focus();
+          }
+        };
+      } else if (closeMatch) {
+        opStages.pop();
+        var closeSel = closeMatch[1] || null;
+        sinkFn = function () {
+          var dlg = closeSel ? document.querySelector(closeSel) : (el.closest ? el.closest('dialog') : null);
+          if (!dlg) return;
+          if (typeof dlg.close === 'function') {
+            dlg.close();
+          } else {
+            dlg.removeAttribute('open');
+          }
+        };
+      } else if (focusMatch) {
+        opStages.pop();
+        var focusSel = focusMatch[1];
+        sinkFn = function () {
+          var target = document.querySelector(focusSel);
+          if (target && typeof target.focus === 'function') {
+            target.focus();
+          }
         };
       }
     }
@@ -1992,20 +2101,38 @@
   }
 
   // --- 7. Event Delegator ---
+  function vxOnHandlesDefaultEvent(el, defaultEventName) {
+    if (!el || !el.hasAttribute || !el.hasAttribute('vx-on')) return false;
+    var chains = splitVxOnChains(el.getAttribute('vx-on') || '');
+    for (var i = 0; i < chains.length; i++) {
+      var stages = splitVxOnChain(chains[i]);
+      if (stages.length > 0) {
+        var srcTokens = stages[0].split(/\s+/).filter(Boolean);
+        if (srcTokens.length === 1 && srcTokens[0] === defaultEventName) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   function initTriggers() {
     document.addEventListener('click', function (e) {
       var trigger = e.target.closest('a[vx-get], a[vx-post], a[vx-put], a[vx-patch], a[vx-delete], button[vx-get], button[vx-post], button[vx-put], button[vx-patch], button[vx-delete]');
-      if (!trigger || trigger.hasAttribute('vx-on')) return;
+      if (!trigger || vxOnHandlesDefaultEvent(trigger, 'click')) return;
       triggerElementRequest(trigger, e);
     });
 
     document.addEventListener('submit', function (e) {
       var form = e.target;
-      if (!hasHttpVerbAttribute(form) || form.hasAttribute('vx-on')) {
+      if (!hasHttpVerbAttribute(form) || vxOnHandlesDefaultEvent(form, 'submit')) {
         return;
       }
       triggerElementRequest(form, e);
     });
+
+    // Close active SSE connection immediately on page unload / hide
+    window.addEventListener('pagehide', closeSse);
 
     // Popstate History Restore
     window.addEventListener('popstate', function () {
@@ -2029,14 +2156,33 @@
 
   // --- 8. SSE Client ---
   var sseSource = null;
+  var sseCurrentUrl = null;
+
+  function closeSse() {
+    if (sseSource) {
+      try { sseSource.close(); } catch (_) {}
+      sseSource = null;
+      sseCurrentUrl = null;
+    }
+  }
+
   function initSse() {
     var sseEl = document.querySelector('[vx-sse]');
-    if (!sseEl) return;
+    if (!sseEl) {
+      closeSse();
+      return;
+    }
     var sseUrl = sseEl.getAttribute('vx-sse');
-    if (!sseUrl || sseSource) return;
+    if (!sseUrl) {
+      closeSse();
+      return;
+    }
+    if (sseSource && sseCurrentUrl === sseUrl) return;
+    closeSse();
 
     try {
       sseSource = new EventSource(sseUrl);
+      sseCurrentUrl = sseUrl;
       sseSource.onopen = function () {
         emitEvent('vx:sse-state', { state: 'open', url: sseUrl });
       };

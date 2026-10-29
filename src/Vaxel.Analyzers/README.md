@@ -9,7 +9,7 @@ Roslyn analyzers and diagnostic rules for **vaxel** applications.
 Add as a development dependency:
 
 ```xml
-<PackageReference Include="Vaxel.Analyzers" Version="2.0.0-rc1">
+<PackageReference Include="Vaxel.Analyzers" Version="2.0.0-rc2">
   <PrivateAssets>all</PrivateAssets>
   <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 </PackageReference>

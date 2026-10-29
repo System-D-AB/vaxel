@@ -431,6 +431,81 @@ public sealed class TagHelperTests : IClassFixture<ComposerApiFactory>
 
     private sealed record SampleTriggerSignals(int MinLen, string Query, bool Open);
 
+    [Fact]
+    public void VxSignals_AcceptsDynamicCSharpJsonString_WithoutHtmlEncodingFailure()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { tabs = Array.Empty<string>(), theme = "auto" });
+
+        var signalsHelper = new VxSignalsTagHelper { Signals = json };
+        var ifMissingHelper = new VxSignalsIfMissingTagHelper { SignalsIfMissing = json };
+
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var out1 = new TagHelperOutput(
+            "body",
+            [new TagHelperAttribute("vx-signals", new Microsoft.AspNetCore.Html.HtmlString("{&quot;tabs&quot;:[]}"))],
+            (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        var out2 = new TagHelperOutput(
+            "body",
+            [new TagHelperAttribute("vx-signals-if-missing", new Microsoft.AspNetCore.Html.HtmlString("{&quot;tabs&quot;:[]}"))],
+            (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        signalsHelper.Process(ctx, out1);
+        ifMissingHelper.Process(ctx, out2);
+
+        Assert.Equal(json, out1.Attributes["vx-signals"].Value);
+        Assert.Equal(json, out2.Attributes["vx-signals-if-missing"].Value);
+    }
+
+    [Fact]
+    public void VxOn_AcceptsMultiChainAndDialogFocusSinks()
+    {
+        var options = new VaxelOptions
+        {
+            SignalSchema = new SignalSchema<SampleTriggerSignals>(),
+        };
+        var helper = new VxOnTagHelper(Microsoft.Extensions.Options.Options.Create(options))
+        {
+            VxOn = "click | set query = ''; click | showModal #drop-db; keydown window | key Escape | close #drop-db; keydown | key Enter | focus #search-box",
+        };
+
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("button", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        helper.Process(ctx, output);
+        Assert.Contains("showModal #drop-db", output.Attributes["vx-on"].Value?.ToString());
+    }
+
+    [Theory]
+    [InlineData("click | showModal drop-db")]
+    [InlineData("click | focus .not-an-id")]
+    [InlineData("click | close invalid-selector")]
+    [InlineData("click | showModal #drop-db | debounce 100")]
+    public void VxOn_RefusesInvalidDomSinkSelectorOrNonFinalSink(string invalidChain)
+    {
+        var helper = new VxOnTagHelper { VxOn = invalidChain };
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("button", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        Assert.Throws<VaxelTagHelperException>(() => helper.Process(ctx, output));
+    }
+
+    [Fact]
+    public void VxBind_AllowsDatasetPropertyAccess_WithRegisteredSignalSchema()
+    {
+        var options = new VaxelOptions
+        {
+            SignalSchema = new SignalSchema<SampleTriggerSignals>(),
+        };
+        var helper = new VxBindTagHelper(Microsoft.Extensions.Options.Options.Create(options));
+        helper.Attributes["disabled"] = "query != dataset.match";
+
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+        var output = new TagHelperOutput("button", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+
+        helper.Process(ctx, output);
+        Assert.Equal("query != dataset.match", output.Attributes["vx-attr:disabled"].Value);
+    }
+
     private static TagHelperOutput RenderAntiforgeryMeta(VaxelOptions options)
     {
         var antiforgery = new StubAntiforgery();

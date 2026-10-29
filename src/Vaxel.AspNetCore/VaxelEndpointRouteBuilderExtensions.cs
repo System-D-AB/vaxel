@@ -25,22 +25,40 @@ public static class VaxelEndpointRouteBuilderExtensions
             var options = httpContext.RequestServices.GetRequiredService<IOptions<VaxelOptions>>().Value;
             var registry = httpContext.RequestServices.GetRequiredService<PushConnectionRegistry>();
 
-            var user = httpContext.User;
-            var isAuthenticated = user.Identity?.IsAuthenticated == true;
+            string? userId = null;
+            IReadOnlySet<string> groups = new HashSet<string>();
+            var isAuthenticated = false;
+
+            if (options.Push.ResolveIdentity is not null)
+            {
+                var resolved = await options.Push.ResolveIdentity(httpContext);
+                if (resolved is not null)
+                {
+                    isAuthenticated = true;
+                    userId = resolved.UserId;
+                    if (resolved.Groups is not null)
+                    {
+                        groups = resolved.Groups;
+                    }
+                }
+            }
+
+            if (!isAuthenticated)
+            {
+                var user = httpContext.User;
+                isAuthenticated = user.Identity?.IsAuthenticated == true;
+                if (isAuthenticated)
+                {
+                    userId = user.FindFirst(options.Push.UserIdClaimType)?.Value ?? user.Identity?.Name;
+                    groups = user.FindAll(options.Push.GroupIdClaimType).Select(c => c.Value).ToHashSet(StringComparer.Ordinal);
+                }
+            }
 
             if (!isAuthenticated && !options.Push.AllowAnonymous)
             {
                 httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return;
             }
-
-            var userId = isAuthenticated
-                ? user.FindFirst(options.Push.UserIdClaimType)?.Value ?? user.Identity?.Name
-                : null;
-
-            var groups = isAuthenticated
-                ? user.FindAll(options.Push.GroupIdClaimType).Select(c => c.Value).ToHashSet(StringComparer.Ordinal)
-                : (IReadOnlySet<string>)new HashSet<string>();
 
             var connectionId = Guid.NewGuid().ToString("N");
             var channel = Channel.CreateUnbounded<PushMessage>(new UnboundedChannelOptions

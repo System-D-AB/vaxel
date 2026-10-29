@@ -37,6 +37,17 @@ internal static class ExpressionTypeChecker
 
             case MemberAccessNode mem:
             {
+                if (mem.Object is IdentifierNode { Name: "dataset" } &&
+                    (schema is null || !schema.IsAllowed("dataset")))
+                {
+                    if (mem.Property is "__proto__" or "constructor" or "prototype")
+                    {
+                        return ExpressionResult<ExprValueType>.Success(ExprValueType.Null, mem.Span);
+                    }
+
+                    return ExpressionResult<ExprValueType>.Success(ExprValueType.String, mem.Span);
+                }
+
                 var objRes = Check(mem.Object, schema);
                 if (!objRes.Ok)
                 {
