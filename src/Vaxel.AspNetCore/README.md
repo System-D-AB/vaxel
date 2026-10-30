@@ -76,7 +76,7 @@ public async Task<IActionResult> OnGetAsync()
 }
 ```
 
-## What's in v2.0
+## Core Features
 
 ### 1. Render-Time Validated Signal Expressions (Zero `eval`)
 
@@ -112,6 +112,14 @@ push.From(orderBus.Subscribe(ct))
         Patch.Ok().Replace($"#order-{evt.Id}", await composer.PartialAsync("_OrderRow", evt)))
     .To(PushScope.Group("kitchen"), ct);
 ```
+
+### 4. View Transitions & Top Progress Bar
+
+Add `vx-transition` to regions (and `vx-transition-name` to shared elements) for smooth View Transition API / CSS `.vx-swapping` & `.vx-settling` animations, and configure the built-in top-of-viewport loading bar with `vx-progress`, `vx-indicator`, and `vx-disable`.
+
+### 5. Layout-Shell Navigation (`vx-boost`, `IVaxelRequest`, `FullPagePaths`)
+
+Adopt Vaxel across an entire MVC or Razor Pages layout shell using `vx-boost` + `vx-target="#content"` + `vx-boost-exclude`, scoped `IVaxelRequest` (`IsPatch`, `IsHistoryRestore`, `Target`, `ShellPatches`), and `VaxelOptions.FullPagePaths`.
 
 ## Security & CSP
 

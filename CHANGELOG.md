@@ -2,6 +2,10 @@
 
 The specification is versioned because it is the contract. Every entry says what changed **and why it was wrong**, because a spec that quietly improves teaches nobody.
 
+## v2.0.0 — 2026-10-30
+
+General availability release of **Vaxel 2.0.0**, incorporating all `2.0.0-rc1` through `2.0.0-rc5` reactivity, expression, trigger pipeline, server push, view transition, top progress bar, and layout-shell capabilities.
+
 ## v2.0.0-rc5 — 2026-10-30
 
 ### `v2.0-rc5-shortcomings` — Layout-shell architecture, transitions, & navigation completions
