@@ -15,6 +15,8 @@ public sealed class VaxelOptions
     public bool NoStoreWhenSignalsRead { get; set; } = true;
     public SwapMode DefaultSwap { get; set; } = SwapMode.Morph;
     public ISignalSchema? SignalSchema { get; set; }
+    public IList<string> FullPagePaths { get; } = new List<string>();
+    public Func<Microsoft.AspNetCore.Http.HttpContext, bool>? ForceFullPage { get; set; }
     public VaxelPushOptions Push { get; set; } = new();
 }
 

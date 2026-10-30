@@ -27,6 +27,7 @@ public static class VaxelServiceCollectionExtensions
         services.AddRazorComponents();
         services.TryAddSingleton<IFragmentComposerFactory, FragmentComposerFactory>();
         services.TryAddScoped<ISignalReader, SignalReader>();
+        services.TryAddScoped<IVaxelRequest, VaxelRequest>();
         services.TryAddScoped<IFragmentComposer>(sp =>
         {
             var factory = sp.GetRequiredService<IFragmentComposerFactory>();

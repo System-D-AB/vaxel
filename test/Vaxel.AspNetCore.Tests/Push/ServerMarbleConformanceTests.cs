@@ -168,17 +168,31 @@ public sealed class ServerMarbleConformanceTests : IClassFixture<ComposerApiFact
         }
 
         var task = ConsumeBatchesAsync();
-        await VirtualScheduler.SettleAsync();
+        for (var i = 0; i < 50 && scheduler.ActiveTimerCount == 0; i++)
+        {
+            await Task.Delay(5);
+        }
 
         ch1.Writer.TryWrite("a1");
+        await Task.Delay(10);
+        await VirtualScheduler.SettleAsync();
         ch2.Writer.TryWrite("b1");
+        await Task.Delay(10);
+        await VirtualScheduler.SettleAsync();
         await scheduler.AdvanceByAsync(TimeSpan.FromMilliseconds(100));
+        for (var i = 0; i < 50 && batches.Count == 0; i++)
+        {
+            await Task.Delay(5);
+        }
 
         Assert.Single(batches);
         Assert.Equal(["a1", "b1"], batches[0]);
 
         ch1.Writer.TryWrite("a2");
+        await Task.Delay(10);
         stopCh.Writer.TryWrite(true);
+        await Task.Delay(10);
+        await VirtualScheduler.SettleAsync();
         await scheduler.AdvanceByAsync(TimeSpan.FromMilliseconds(100));
         await task;
     }

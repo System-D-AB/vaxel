@@ -181,3 +181,67 @@ public sealed partial class VxTransitionTagHelper : TagHelper
         }
     }
 }
+
+/// <summary>
+/// Tag Helper for delegated same-origin link interception (<c>vx-boost</c> and <c>vx-boost-exclude</c>).
+/// </summary>
+[HtmlTargetElement("*", Attributes = "vx-boost")]
+[HtmlTargetElement("*", Attributes = "vx-boost-exclude")]
+public sealed class VxBoostTagHelper : TagHelper
+{
+    [HtmlAttributeNotBound]
+    public string? Boost { get; set; }
+
+    [HtmlAttributeName("vx-boost-exclude")]
+    public string? BoostExclude { get; set; }
+
+    public override void Process(TagHelperContext context, TagHelperOutput output)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(output);
+
+        var hasBoostAttr = output.Attributes.TryGetAttribute("vx-boost", out var boostAttr);
+        var boostVal = Boost ?? (hasBoostAttr ? boostAttr?.Value?.ToString() : null);
+        if (Boost is not null || hasBoostAttr)
+        {
+            var trimmed = (boostVal ?? string.Empty).Trim();
+            if (trimmed.Length > 0 &&
+                !string.Equals(trimmed, "true", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(trimmed, "false", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(trimmed, "on", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(trimmed, "off", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new VaxelTagHelperException(
+                    $"Invalid vx-boost value '{trimmed}'. Expected an empty attribute, 'true', 'false', 'on', or 'off'.");
+            }
+
+            if (Boost is not null)
+            {
+                output.Attributes.SetAttribute("vx-boost", trimmed);
+            }
+        }
+
+        var excludeVal = BoostExclude ?? (output.Attributes.TryGetAttribute("vx-boost-exclude", out var exAttr) ? exAttr.Value?.ToString() : null);
+        if (excludeVal is not null)
+        {
+            var trimmed = excludeVal.Trim();
+            var parts = trimmed.Split([' ', '\t', '\r', '\n', ','], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0)
+            {
+                throw new VaxelTagHelperException(
+                    "Invalid vx-boost-exclude: expected one or more path prefixes starting with '/'.");
+            }
+
+            foreach (var part in parts)
+            {
+                if (!part.StartsWith('/'))
+                {
+                    throw new VaxelTagHelperException(
+                        $"Invalid vx-boost-exclude prefix '{part}'. Each excluded path prefix must start with '/' (e.g. '/auth /checkout').");
+                }
+            }
+
+            output.Attributes.SetAttribute("vx-boost-exclude", trimmed);
+        }
+    }
+}

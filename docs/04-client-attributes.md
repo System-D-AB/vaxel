@@ -24,8 +24,10 @@ Attributes are written in Razor through Tag Helpers ([05 — .NET API](05-dotnet
 |---|---|---|---|
 | `vx-get` | ✅ | URL | Issue a GET. On `<a>`, defaults to the element's `href`. A `vx-get` **form** sends its fields as the query string |
 | `vx-post` | ✅ | URL | POST. On `<form>`, defaults to `action`; also `vx-put`, `vx-patch`, `vx-delete` |
+| `vx-boost` | ✅ | —, `on`, or `off` | On a container (e.g. `<body vx-boost vx-target="#content">`): intercept unmodified left-clicks on qualifying descendant same-origin `<a href>` links as GET patch requests |
+| `vx-boost-exclude` | ✅ | `/path ...` | Space- or comma-separated path prefixes excluded from `vx-boost` (e.g. `vx-boost-exclude="/auth /checkout /api"`) |
 | `vx-on` | ✅ | chain | Declarative event stream pipeline (`source \| operator... \| sink`). Defaults when omitted: `click` on `<a>`/`<button>`, `submit` on `<form>` |
-| `vx-target` | ✅ | `#id` | Advisory target sent as `VX-Target`; the server decides what it patches |
+| `vx-target` | ✅ | `#id` | Advisory target sent as `VX-Target` (inherited by descendant triggers if not overridden); the server decides what it patches |
 | `vx-swap` | ⬜ | mode | Advisory default mode for the response |
 | `vx-vals-*` | ✅ | literal | `vx-vals-tab="submissions"` contributes a `tab=submissions` field — a body field for state-changing methods, a query-string field for GET. Literals only |
 | `vx-include` | ⬜ | `#id` | Also send the fields of this form or container |
@@ -180,7 +182,7 @@ Because `eval` and `new Function` break `script-src 'self'`, while forcing every
 |---|---|---|
 | `vx:before-request` | Before sending; cancellable | trigger, url, method |
 | `vx:before-apply` | Document parsed, before patching | patches, directive |
-| `vx:after-apply` | All patches applied and bound | patches, ignored |
+| `vx:after-apply` | All patches applied and bound | `{ patchesApplied, targets }` |
 | `vx:signals-changed` | After a signal patch or a binding write | changed keys |
 | `vx:error` | Trigger, transport, parse, expression, or patch-apply failure | `{ reason, url, target, error, doc }` (`reason: 'trigger' \| 'transport' \| 'apply' \| 'expression' \| 'unknown-mode' \| 'missing-target'`, plus `fallback` on `'apply'`) |
 | `vx:sse-state` | Stream connected, dropped, reconnecting | state, attempt |

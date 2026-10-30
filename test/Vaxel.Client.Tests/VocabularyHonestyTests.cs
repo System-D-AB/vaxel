@@ -17,6 +17,7 @@ public sealed class VocabularyHonestyTests
     private static readonly string[] ImplementedIn10 =
     [
         "vx-get", "vx-post", "vx-put", "vx-patch", "vx-delete",
+        "vx-boost", "vx-boost-exclude",
         "vx-on", "vx-target", "vx-vals-", "vx-confirm", "vx-indicator", "vx-disable", "vx-progress",
         "vx-sync", "vx-encoding",
         "vx-preserve", "vx-preserve-attr", "vx-overwrite-dirty", "vx-sse",
@@ -116,5 +117,7 @@ public sealed class VocabularyHonestyTests
         Assert.Contains("vx-transition-name=", allCases);
         Assert.Contains("vx-transition>", allCases);
         Assert.Contains("vx-progress=", allCases);
+        Assert.Contains("vx-boost", allCases);
+        Assert.Contains("vx-boost-exclude=", allCases);
     }
 }

@@ -16,7 +16,7 @@ You write Razor Pages, Views, Partials, ViewComponents, and Razor Components. Th
 Apps reference **`Vaxel.AspNetCore`**. That package pulls in the agent and serves `/_vaxel/vaxel.js`.
 
 ```xml
-<PackageReference Include="Vaxel.AspNetCore" Version="2.0.0-rc4" />
+<PackageReference Include="Vaxel.AspNetCore" Version="2.0.0-rc5" />
 ```
 
 ```csharp
@@ -157,6 +157,72 @@ During every patch on a `vx-transition` region, Vaxel also toggles `.vx-swapping
 }
 ```
 
+## 4. Layout-shell navigation (`vx-boost`, `IVaxelRequest`, `FullPagePaths`)
+
+In multi-controller MVC or Razor Pages applications, you can adopt Vaxel across an entire layout shell without rewriting existing controllers or annotating every `<a href>` link.
+
+### 1. Configure full-page route exclusions (`FullPagePaths`)
+
+In `Program.cs`, register path prefixes (or a `ForceFullPage` predicate) that use a separate layout or third-party script context. When a patch request hits any of those paths, `UseVaxel()` short-circuits before MVC/Razor executes and returns `<vx-directive reload></vx-directive>`, instructing the browser to perform a clean full-page navigation:
+
+```csharp
+builder.Services.AddVaxel(options =>
+{
+    options.FullPagePaths.Add("/auth");
+    options.FullPagePaths.Add("/billing");
+});
+```
+
+### 2. Boost links and branch `_Layout.cshtml` with `IVaxelRequest`
+
+Add `vx-boost` and `vx-target="#content"` to your shell container so same-origin `<a href>` links automatically issue Vaxel `GET` patch requests (while automatically ignoring Ctrl/Cmd/Shift/Alt/middle-click, `target="_blank"`, `download`, `rel="external"`, cross-origin URLs, `#hash` anchors, and `vx-boost-exclude` prefixes). Inject `IVaxelRequest` in `_Layout.cshtml` to emit only `<vx-patch target="#content">` plus any out-of-band shell patches (`Vx.AddShellPatch(...)`) on patch requests:
+
+```html
+@using Vaxel
+@inject IVaxelRequest Vx
+@{
+    var isShellPatch = Vx.IsPatch && (Vx.Target is null or "#content");
+}
+@if (isShellPatch)
+{
+    <vx-patch target="#content" swap="inner">@RenderBody()</vx-patch>
+    foreach (var shellPatch in Vx.ShellPatches)
+    {
+        <vx-patch target="@shellPatch.Target" swap="@shellPatch.SwapMode">@shellPatch.Content</vx-patch>
+    }
+    <vx-directive title="@ViewData["Title"]"
+                  push-url="@($"{Context.Request.Path}{Context.Request.QueryString}")"
+                  scroll="top"></vx-directive>
+}
+else
+{
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <title>@ViewData["Title"]</title>
+    </head>
+    <body vx-boost vx-target="#content" vx-boost-exclude="/auth /billing">
+        <header id="site-header">@await Html.PartialAsync("_Header")</header>
+        <main id="content" vx-region vx-transition>
+            @RenderBody()
+        </main>
+        <script src="/_vaxel/vaxel.js" defer></script>
+    </body>
+    </html>
+}
+```
+
+Wait-free post-swap hooks can inspect `e.detail.targets` on `vx:after-apply` to see which selectors were patched:
+
+```js
+document.addEventListener("vx:after-apply", (e) => {
+  // e.detail === { patchesApplied: 1, targets: ["#content"] }
+  if (e.detail.targets.includes("#content")) {
+    // Re-initialize page-level widgets inside #content
+  }
+});
+```
+
 ## Concepts
 
 | Term | Meaning |
@@ -188,6 +254,7 @@ A trigger belongs on an `<a href>`, a `<form>`, or a `<button>` inside a form, e
 | Attribute | Status | |
 |---|---|---|
 | `vx-get` `vx-post` `vx-put` `vx-patch` `vx-delete` | ✅ | Issue that method. On `<a>` / `<form>`, defaults to `href` / `action`. A `vx-get` form sends its fields as the query string. |
+| `vx-boost` `vx-boost-exclude` | ✅ | Delegated same-origin `<a href>` interception on a container (`<body vx-boost vx-target="#content" vx-boost-exclude="/auth /checkout">`). |
 | `vx-on` | ✅ | Declarative event stream pipeline (`source \| operator... \| sink`). Defaults when omitted: `click` on `<a>`/`<button>`, `submit` on `<form>`. |
 | `vx-target` | ✅ | Advisory `#id` sent as `VX-Target`. The server decides what it patches. |
 | `vx-swap` | ⬜ | Advisory swap mode for the response. |
@@ -258,7 +325,7 @@ Trigger timing, scopes, filtering, and signal writes are expressed as left-to-ri
 |---|---|
 | `vx:before-request` | Before send; cancellable. |
 | `vx:before-apply` | Document parsed, before patching. Islands suspend here. |
-| `vx:after-apply` | All patches applied and bound. Islands resume here. |
+| `vx:after-apply` | All patches applied and bound (`detail: { patchesApplied, targets }`). Islands resume here. |
 | `vx:signals-changed` | After a signal patch or a binding write. |
 | `vx:error` | Transport, parse, or protocol failure. |
 | `vx:sse-state` | Stream connected, dropped, or reconnecting. |

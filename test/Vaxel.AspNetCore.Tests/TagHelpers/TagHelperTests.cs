@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using Microsoft.AspNetCore.TestHost;
 using Vaxel;
 using Vaxel.AspNetCore.Tests.Composer;
 using Vaxel.TagHelpers;
@@ -600,6 +601,85 @@ public sealed class TagHelperTests : IClassFixture<ComposerApiFactory>
         var badMode = new VxTransitionTagHelper { Transition = "spin" };
         var outBadMode = new TagHelperOutput("div", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
         Assert.Throws<VaxelTagHelperException>(() => badMode.Process(ctx, outBadMode));
+    }
+
+    [Fact]
+    public void VxBoostTagHelper_ValidatesBoostAndExcludePrefixes()
+    {
+        var ctx = new TagHelperContext([], new Dictionary<object, object>(), "test");
+
+        var valid = new VxBoostTagHelper { Boost = "on", BoostExclude = "/auth /checkout, /api" };
+        var outValid = new TagHelperOutput("body", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        valid.Process(ctx, outValid);
+        Assert.Equal("on", outValid.Attributes["vx-boost"].Value);
+        Assert.Equal("/auth /checkout, /api", outValid.Attributes["vx-boost-exclude"].Value);
+
+        var badBoost = new VxBoostTagHelper { Boost = "invalid" };
+        var outBadBoost = new TagHelperOutput("body", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        Assert.Throws<VaxelTagHelperException>(() => badBoost.Process(ctx, outBadBoost));
+
+        var badExclude = new VxBoostTagHelper { BoostExclude = "relative-path" };
+        var outBadExclude = new TagHelperOutput("body", [], (_, _) => Task.FromResult<TagHelperContent>(new DefaultTagHelperContent()));
+        Assert.Throws<VaxelTagHelperException>(() => badExclude.Process(ctx, outBadExclude));
+    }
+
+    [Fact]
+    public void VaxelRequest_ExposesIsPatch_IsHistoryRestore_Target_AndShellPatches()
+    {
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        httpContext.Request.Headers[VaxelProtocol.RequestHeader] = "1";
+        httpContext.Request.Headers[VaxelProtocol.ProtocolHeader] = "1";
+        httpContext.Request.Headers[VaxelProtocol.HistoryHeader] = "restore";
+        httpContext.Request.Headers[VaxelProtocol.TargetHeader] = "#content";
+
+        var accessor = new Microsoft.AspNetCore.Http.HttpContextAccessor { HttpContext = httpContext };
+        var vx = new VaxelRequest(accessor);
+
+        Assert.True(vx.IsPatch);
+        Assert.True(vx.IsHistoryRestore);
+        Assert.Equal("#content", vx.Target);
+
+        vx.AddShellPatch("#badge", "<span id=\"badge\">2</span>");
+        Assert.Single(vx.ShellPatches);
+
+        using var sw = new StringWriter();
+        vx.ShellPatches[0].WriteTo(sw, System.Text.Encodings.Web.HtmlEncoder.Default);
+        Assert.Equal("<vx-patch target=\"#badge\" mode=\"morph\"><span id=\"badge\">2</span></vx-patch>", sw.ToString());
+    }
+
+    [Fact]
+    public async Task UseVaxel_ShortCircuitsFullPagePaths_AndAddsVaryHeaderOnHtml()
+    {
+        var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddVaxel(o =>
+        {
+            o.FullPagePaths.Add("/auth");
+            o.FullPagePaths.Add("/checkout");
+        });
+
+        await using var app = builder.Build();
+        app.UseVaxel();
+        app.MapGet("/checkout/pay", () => Microsoft.AspNetCore.Http.Results.Content("<html>Checkout</html>", "text/html"));
+        app.MapGet("/items", () => Microsoft.AspNetCore.Http.Results.Content("<html>Items</html>", "text/html"));
+        await app.StartAsync();
+
+        using var client = app.GetTestClient();
+
+        // 1. Patch request to a FullPagePath short-circuits with <vx-directive reload="1" />
+        using var reqPatch = new HttpRequestMessage(HttpMethod.Get, "/checkout/pay");
+        reqPatch.Headers.Add("VX-Request", "1");
+        reqPatch.Headers.Add("VX-Protocol", "1");
+        var resPatch = await client.SendAsync(reqPatch);
+        var bodyPatch = await resPatch.Content.ReadAsStringAsync();
+
+        Assert.Equal("text/vnd.vaxel-patch+html; charset=utf-8", resPatch.Content.Headers.ContentType?.ToString());
+        Assert.Equal("<vx-directive reload=\"1\" />", bodyPatch);
+        Assert.Contains("VX-Request", resPatch.Headers.Vary);
+
+        // 2. Full-page HTML response on /items includes Vary: VX-Request
+        var resHtml = await client.GetAsync("/items");
+        Assert.Contains("VX-Request", resHtml.Headers.Vary);
     }
 
     private static TagHelperOutput RenderAntiforgeryMeta(VaxelOptions options)

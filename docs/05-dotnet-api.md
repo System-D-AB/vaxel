@@ -24,14 +24,17 @@ builder.Services.AddVaxel(options =>
     options.MaxSignalsBytes       = 8 * 1024;
     options.NoStoreWhenSignalsRead = true;
     options.DefaultSwap           = SwapMode.Morph;
+    options.FullPagePaths.Add("/auth");             // optional: patch requests to these prefixes return <vx-directive reload="1" />
     options.Push.HeartbeatSeconds = 20;
 });
 
-app.UseVaxel();                  // response marking, protocol negotiation, no per-request state
+app.UseVaxel();                  // response marking (Vary: VX-Request), FullPagePaths reload guard, protocol negotiation
 app.MapVaxelStream("/_vaxel/stream");   // optional: the SSE channel
 ```
 
-`UseVaxel()` adds no middleware that touches requests it does not own: it sets `Vary: VX-Request`, negotiates the protocol version, and short-circuits nothing.
+`UseVaxel()` sets `Vary: VX-Request` on HTML and patch responses, sets `Cache-Control: private, no-store` on patch responses by default, and short-circuits patch requests (`VX-Request: 1`) matching `VaxelOptions.FullPagePaths` (or `VaxelOptions.ForceFullPage`) with `<vx-directive reload="1" />` before MVC/Razor executes.
+
+**Layout-shell switching (`IVaxelRequest`).** Applications that keep a persistent shell in `_Layout.cshtml` and patch `#content` on navigation can inject `IVaxelRequest` (`@inject Vaxel.IVaxelRequest Vx`), which exposes `IsPatch`, `IsHistoryRestore` (`VX-History: restore`), `Target`, and `ShellPatches` / `AddShellPatch(target, html)` for secondary regions (such as breadcrumbs or header badges) alongside `VaxelProtocol.PatchContentType`.
 
 ## Rendering any Razor unit
 

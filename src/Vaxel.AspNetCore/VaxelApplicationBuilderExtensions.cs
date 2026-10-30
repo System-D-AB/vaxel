@@ -35,14 +35,27 @@ public static class VaxelApplicationBuilderExtensions
                 }
             }
 
+            var options = context.RequestServices.GetService<Microsoft.Extensions.Options.IOptions<Vaxel.VaxelOptions>>()?.Value;
+            if (Vaxel.Vaxel.IsVaxelRequest(context) && options is not null && ShouldForceFullPage(context, options))
+            {
+                context.Response.StatusCode = StatusCodes.Status200OK;
+                context.Response.ContentType = Vaxel.VaxelProtocol.PatchContentType;
+                context.Response.Headers.CacheControl = "private, no-store";
+                context.Response.Headers.Vary = "VX-Request";
+                await context.Response.WriteAsync("<vx-directive reload=\"1\" />", context.RequestAborted).ConfigureAwait(false);
+                return;
+            }
+
             context.Response.OnStarting(() =>
             {
                 var response = context.Response;
                 var request = context.Request;
-                var isPatch = response.ContentType?.StartsWith("text/vnd.vaxel-patch+html", StringComparison.OrdinalIgnoreCase) == true;
+                var contentType = response.ContentType;
+                var isPatch = contentType?.StartsWith("text/vnd.vaxel-patch+html", StringComparison.OrdinalIgnoreCase) == true;
+                var isHtml = contentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true;
                 var hasVxRequest = request.Headers.ContainsKey("VX-Request");
 
-                if (isPatch || hasVxRequest)
+                if (isPatch || isHtml || hasVxRequest)
                 {
                     var vary = response.Headers.Vary.ToString();
                     if (string.IsNullOrEmpty(vary))
@@ -55,8 +68,7 @@ public static class VaxelApplicationBuilderExtensions
                     }
                 }
 
-                var options = context.RequestServices.GetService<Microsoft.Extensions.Options.IOptions<Vaxel.VaxelOptions>>()?.Value;
-                if (options is not null && options.NoStoreWhenSignalsRead && context.Items.ContainsKey(Vaxel.SignalReader.SignalsReadItemKey))
+                if (isPatch || (options is not null && options.NoStoreWhenSignalsRead && context.Items.ContainsKey(Vaxel.SignalReader.SignalsReadItemKey)))
                 {
                     var existingCacheControl = response.Headers.CacheControl.ToString();
                     if (string.IsNullOrEmpty(existingCacheControl))
@@ -70,5 +82,45 @@ public static class VaxelApplicationBuilderExtensions
 
             await next(context).ConfigureAwait(false);
         });
+    }
+
+    private static bool ShouldForceFullPage(HttpContext context, Vaxel.VaxelOptions options)
+    {
+        if (options.ForceFullPage?.Invoke(context) == true)
+        {
+            return true;
+        }
+
+        if (options.FullPagePaths.Count == 0)
+        {
+            return false;
+        }
+
+        var path = context.Request.Path;
+        foreach (var rawPrefix in options.FullPagePaths)
+        {
+            if (string.IsNullOrWhiteSpace(rawPrefix))
+            {
+                continue;
+            }
+
+            var prefix = rawPrefix.Trim();
+            if (!prefix.StartsWith('/'))
+            {
+                prefix = "/" + prefix;
+            }
+
+            if (prefix.Length > 1 && prefix.EndsWith('/'))
+            {
+                prefix = prefix.TrimEnd('/');
+            }
+
+            if (path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
